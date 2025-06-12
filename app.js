@@ -1,3 +1,4 @@
+
 let coilData = [];
 
 document.getElementById('excelFile').addEventListener('change', (e) => {
@@ -32,9 +33,13 @@ function searchCoil() {
 function displayResult(data) {
   const resultDiv = document.getElementById('result');
   if (data) {
-    resultDiv.innerHTML = Object.entries(data).map(
-      ([key, val]) => `<p><strong>${key.trim()}:</strong> ${val}</p>`
-    ).join('');
+    let tableHTML = '<table style="width:100%; border-collapse: collapse;">';
+    tableHTML += '<thead><tr><th style="border: 1px solid #fff; padding: 8px; color: white;">Field</th><th style="border: 1px solid #fff; padding: 8px; color: white;">Value</th></tr></thead><tbody>';
+    for (const [key, val] of Object.entries(data)) {
+      tableHTML += `<tr><td style="border: 1px solid #fff; padding: 8px; color: white;">${key.trim()}</td><td style="border: 1px solid #fff; padding: 8px; color: white;">${val}</td></tr>`;
+    }
+    tableHTML += '</tbody></table>';
+    resultDiv.innerHTML = tableHTML;
   } else {
     resultDiv.innerHTML = '<p>Coil number not found.</p>';
   }
