@@ -1,21 +1,120 @@
-
 let coilData = [];
+let loadedFileName = ''; // Variable to store the loaded file name
 
+// Define the raw GitHub URL for your Excel file
+const GITHUB_EXCEL_URL = 'https://raw.githubusercontent.com/gmanand23/Coil_Info/main/coil-data.xlsx';
+
+// Function to save data to localStorage
+function saveCoilData(data, fileName) {
+  try {
+    localStorage.setItem('coilData', JSON.stringify(data));
+    localStorage.setItem('loadedFileName', fileName);
+    console.log('Coil data and file name saved to localStorage.');
+  } catch (e) {
+    console.error('Error saving to localStorage:', e);
+  }
+}
+
+// Function to load data from localStorage
+function loadCoilData() {
+  try {
+    const storedData = localStorage.getItem('coilData');
+    const storedFileName = localStorage.getItem('loadedFileName');
+
+    if (storedData && storedFileName) {
+      coilData = JSON.parse(storedData);
+      loadedFileName = storedFileName;
+      document.getElementById('fileName').textContent = `Loaded File (from local storage): ${loadedFileName}`;
+      alert('Coil data loaded from previous session!');
+      return true; // Indicate that data was loaded from local storage
+    }
+  } catch (e) {
+    console.error('Error loading from localStorage:', e);
+    localStorage.removeItem('coilData');
+    localStorage.removeItem('loadedFileName');
+  }
+  return false; // Indicate that data was NOT loaded from local storage
+}
+
+// Function to fetch and parse Excel from URL
+async function fetchAndLoadExcelFromUrl(url) {
+  try {
+    document.getElementById('fileName').textContent = `Loading data from GitHub...`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status} - Could not fetch Excel from GitHub.`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const data = new Uint8Array(arrayBuffer);
+    const workbook = XLSX.read(data, { type: 'array' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    coilData = XLSX.utils.sheet_to_json(sheet);
+
+    // Update loadedFileName based on the URL's last segment if not already set
+    const urlParts = url.split('/');
+    loadedFileName = urlParts[urlParts.length - 1] || 'coil-data.xlsx';
+
+    document.getElementById('fileName').textContent = `Loaded File (from GitHub): ${loadedFileName}`;
+    saveCoilData(coilData, loadedFileName); // Save to local storage after successful fetch
+    alert('Excel loaded successfully from GitHub!');
+  } catch (error) {
+    console.error('Error loading Excel from URL:', error);
+    document.getElementById('fileName').textContent = `Failed to load from GitHub. Using local data if available.`;
+    alert('Failed to load Excel from GitHub. Check console for details. Attempting to use locally stored data.');
+  }
+}
+
+// Event listener for local Excel file upload
 document.getElementById('excelFile').addEventListener('change', (e) => {
   coilData = [];
   document.getElementById('result').innerHTML = '';
   document.getElementById('coilInput').value = '';
   document.getElementById('suggestions').style.display = 'none';
-  document.getElementById('fileName').textContent = `Loaded File: ${e.target.files[0].name}`;
-  const reader = new FileReader();
-  reader.onload = (evt) => {
-    const data = new Uint8Array(evt.target.result);
-    const workbook = XLSX.read(data, { type: 'array' });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    coilData = XLSX.utils.sheet_to_json(sheet);
-    alert('Excel loaded successfully!');
-  };
-  reader.readAsArrayBuffer(e.target.files[0]);
+
+  const file = e.target.files[0];
+  if (file) {
+    loadedFileName = file.name;
+    document.getElementById('fileName').textContent = `Loaded File (from local upload): ${loadedFileName}`;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const data = new Uint8Array(evt.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      coilData = XLSX.utils.sheet_to_json(sheet);
+      saveCoilData(coilData, loadedFileName); // Save to local storage
+      alert('Excel loaded successfully from local file!');
+    };
+    reader.readAsArrayBuffer(file);
+  }
+});
+
+// Function to download the loaded Excel file
+function downloadExcel() {
+  if (coilData.length === 0) {
+    alert('No Excel data to download. Please ensure a file is loaded.');
+    return;
+  }
+
+  if (!loadedFileName) {
+    loadedFileName = 'downloaded_coil_data.xlsx'; // Fallback name
+  }
+
+  const worksheet = XLSX.utils.json_to_sheet(coilData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Coil Data");
+
+  XLSX.writeFile(workbook, loadedFileName);
+}
+
+// Call loadCoilData first, then try to fetch from URL if local storage is empty or fails
+document.addEventListener('DOMContentLoaded', async () => {
+  const loadedFromLocal = loadCoilData(); // Attempt to load from local storage
+  if (!loadedFromLocal || coilData.length === 0) { // If nothing in local storage or it was empty
+    await fetchAndLoadExcelFromUrl(GITHUB_EXCEL_URL); // Then try to fetch from GitHub
+  }
 });
 
 function searchCoil() {
