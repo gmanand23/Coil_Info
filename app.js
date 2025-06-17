@@ -148,26 +148,24 @@ let qrReader = null;
 
 function startScanner() {
   if (qrReader) {
-    closeScanner(); // Close if already open
+    closeScanner();
   }
   const readerDiv = document.getElementById("reader");
-  readerDiv.innerHTML = ''; // Clear previous content
+  readerDiv.innerHTML = '';
 
   qrReader = new Html5Qrcode("reader", { verbose: false });
   qrReader.start(
-    { facingMode: { exact: "environment" } }, // Use "environment" for back camera
+    { facingMode: "environment" }, // Changed from { exact: "environment" }
     {
-      fps: 10,    // frames per second
-      qrbox: { width: 250, height: 250 }  // scan box size
+      fps: 10,
+      qrbox: { width: 250, height: 250 }
     },
     (decodedText, decodedResult) => {
-      // successful scan
       document.getElementById('coilInput').value = decodedText;
       searchCoil();
       closeScanner();
     },
     (errorMessage) => {
-      // QR error
       console.warn(`QR error: ${errorMessage}`);
     }
   );
