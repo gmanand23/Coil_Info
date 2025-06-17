@@ -147,19 +147,27 @@ function displayResult(data) {
 let qrReader = null;
 
 function startScanner() {
-  const readerElement = document.getElementById("reader");
-  readerElement.innerHTML = '';
-  qrReader = new Html5Qrcode("reader");
+  if (qrReader) {
+    closeScanner(); // Close if already open
+  }
+  const readerDiv = document.getElementById("reader");
+  readerDiv.innerHTML = ''; // Clear previous content
 
+  qrReader = new Html5Qrcode("reader", { verbose: false });
   qrReader.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: 400 },
-    (decodedText) => {
+    { facingMode: { exact: "environment" } }, // Use "environment" for back camera
+    {
+      fps: 10,    // frames per second
+      qrbox: { width: 250, height: 250 }  // scan box size
+    },
+    (decodedText, decodedResult) => {
+      // successful scan
       document.getElementById('coilInput').value = decodedText;
       searchCoil();
       closeScanner();
     },
     (errorMessage) => {
+      // QR error
       console.warn(`QR error: ${errorMessage}`);
     }
   );
