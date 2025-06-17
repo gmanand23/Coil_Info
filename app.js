@@ -153,7 +153,7 @@ function startScanner() {
 
   qrReader.start(
     { facingMode: "environment" },
-    { fps: 10, qrbox: 800 },
+    { fps: 10, qrbox: 600 },
     (decodedText) => {
       document.getElementById('coilInput').value = decodedText;
       searchCoil();
