@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -20,7 +21,6 @@
       align-items: center;
       padding: 20px 10px;
     }
-
     .container {
       background: rgba(255, 255, 255, 0.1);
       padding: 20px;
@@ -29,7 +29,6 @@
       width: 100%;
       max-width: 500px;
     }
-
     input, button {
       width: 100%;
       padding: 12px;
@@ -38,23 +37,19 @@
       border-radius: 8px;
       font-size: 16px;
     }
-
     input[type="text"], input[type="file"] {
       background: #ecf0f1;
       color: #2c3e50;
     }
-
     button {
       background-color: #1abc9c;
       color: white;
       font-weight: bold;
       cursor: pointer;
     }
-
     button.clear-button {
       background-color: #e74c3c;
     }
-
     #suggestions {
       background: white;
       color: #2c3e50;
@@ -66,24 +61,20 @@
       z-index: 10;
       display: none;
     }
-
     #suggestions div {
       padding: 10px;
       cursor: pointer;
       border-bottom: 1px solid #eee;
     }
-
     #suggestions div:hover {
       background-color: #f1f1f1;
     }
-
     #result {
       background-color: rgba(255, 255, 255, 0.2);
       padding: 15px;
       border-radius: 10px;
       margin-top: 15px;
     }
-
     #reader {
       width: 100%;
       margin-top: 15px;
@@ -95,25 +86,32 @@
     <h2>Upload Excel File</h2>
     <input type="file" id="excelFile" accept=".xlsx, .xls">
     <p id="fileName" style="color: #ecf0f1;"></p>
-
     <button onclick="downloadExcel()">Download Loaded Excel</button>
     <button class="clear-button" onclick="clearLocalStorage()">Clear Local Storage</button>
-
     <h2>Enter or Scan Coil Number</h2>
     <div style="position: relative;">
-      <input type="text" id="coilInput" placeholder="Enter Coil Number" oninput="showSuggestions()" autocomplete="off">
+      <input type="text" id="coilInput" placeholder="Enter Coil Number" oninput="showSuggestions(); toggleClearButton();" autocomplete="off">
       <div id="suggestions"></div>
     </div>
-
-    <button onclick="searchCoil()">Search</button>
+    <button id="clearInputBtn" class="clear-button" onclick="clearInput()" style="display: none;">Clear</button>
     <button onclick="startScanner()">Scan QR</button>
-
     <div id="reader" ondblclick="closeScanner()"></div>
-
     <h2>Coil Details</h2>
     <div id="result"></div>
   </div>
-
   <script src="app.js"></script>
+  <script>
+    function toggleClearButton() {
+      const input = document.getElementById('coilInput');
+      const clearBtn = document.getElementById('clearInputBtn');
+      clearBtn.style.display = input.value.trim() !== '' ? 'block' : 'none';
+    }
+    function clearInput() {
+      document.getElementById('coilInput').value = '';
+      document.getElementById('result').innerHTML = '';
+      document.getElementById('suggestions').style.display = 'none';
+      document.getElementById('clearInputBtn').style.display = 'none';
+    }
+  </script>
 </body>
 </html>

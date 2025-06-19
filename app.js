@@ -218,3 +218,16 @@ function showSuggestions() {
     suggestionsDiv.style.display = 'none';
   }
 }
+
+function toggleClearButton() {
+  const input = document.getElementById('coilInput');
+  const clearBtn = document.getElementById('clearInputBtn');
+  clearBtn.style.display = input.value.trim() !== '' ? 'block' : 'none';
+}
+
+function clearInput() {
+  document.getElementById('coilInput').value = '';
+  document.getElementById('result').innerHTML = '';
+  document.getElementById('suggestions').style.display = 'none';
+  document.getElementById('clearInputBtn').style.display = 'none';
+}
