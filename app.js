@@ -98,6 +98,8 @@ function downloadExcel() {
     return;
   }
 
+  // loadedFileName is already set and managed by the load/fetch functions
+  // The fallback is only used if loadedFileName is somehow empty, which it shouldn't be if data is present.
   if (!loadedFileName) {
     loadedFileName = 'downloaded_coil_data.xlsx'; // Fallback name
   }
@@ -111,7 +113,10 @@ function downloadExcel() {
 
 // Call loadCoilData first, then try to fetch from URL if local storage is empty or fails
 document.addEventListener('DOMContentLoaded', async () => {
-  await fetchAndLoadExcelFromUrl(GITHUB_EXCEL_URL); // Always fetch latest from GitHub
+  const loadedFromLocal = loadCoilData(); // Attempt to load from local storage
+  if (!loadedFromLocal || coilData.length === 0) { // If nothing in local storage or it was empty
+    await fetchAndLoadExcelFromUrl(GITHUB_EXCEL_URL); // Then try to fetch from GitHub
+  }
 });
 
 function searchCoil() {
