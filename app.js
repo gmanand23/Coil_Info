@@ -4,38 +4,6 @@ let loadedFileName = ''; // Variable to store the loaded file name
 // Define the raw GitHub URL for your Excel file
 const GITHUB_EXCEL_URL = 'https://raw.githubusercontent.com/gmanand23/Coil_Info/main/coil-data.xlsx';
 
-// Function to save data to localStorage
-function saveCoilData(data, fileName) {
-  try {
-    localStorage.setItem('coilData', JSON.stringify(data));
-    localStorage.setItem('loadedFileName', fileName);
-    console.log('Coil data and file name saved to localStorage.');
-  } catch (e) {
-    console.error('Error saving to localStorage:', e);
-  }
-}
-
-// Function to load data from localStorage
-function loadCoilData() {
-  try {
-    const storedData = localStorage.getItem('coilData');
-    const storedFileName = localStorage.getItem('loadedFileName');
-
-    if (storedData && storedFileName) {
-      coilData = JSON.parse(storedData);
-      loadedFileName = storedFileName;
-      document.getElementById('fileName').textContent = `Loaded File (from local storage): ${loadedFileName}`;
-      alert('Coil data loaded from previous session!');
-      return true; // Indicate that data was loaded from local storage
-    }
-  } catch (e) {
-    console.error('Error loading from localStorage:', e);
-    localStorage.removeItem('coilData');
-    localStorage.removeItem('loadedFileName');
-  }
-  return false; // Indicate that data was NOT loaded from local storage
-}
-
 // Function to fetch and parse Excel from URL
 async function fetchAndLoadExcelFromUrl(url) {
   try {
@@ -52,17 +20,16 @@ async function fetchAndLoadExcelFromUrl(url) {
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     coilData = XLSX.utils.sheet_to_json(sheet);
 
-    // Update loadedFileName based on the URL's last segment if not already set
+    // Update loadedFileName based on the URL's last segment
     const urlParts = url.split('/');
     loadedFileName = urlParts[urlParts.length - 1] || 'coil-data.xlsx';
 
     document.getElementById('fileName').textContent = `Loaded File (from GitHub): ${loadedFileName}`;
-    saveCoilData(coilData, loadedFileName); // Save to local storage after successful fetch
     alert('Excel loaded successfully from GitHub!');
   } catch (error) {
     console.error('Error loading Excel from URL:', error);
-    document.getElementById('fileName').textContent = `Failed to load from GitHub. Using local data if available.`;
-    alert('Failed to load Excel from GitHub. Check console for details. Attempting to use locally stored data.');
+    document.getElementById('fileName').textContent = `Failed to load from GitHub.`;
+    alert('Failed to load Excel from GitHub. Check console for details.');
   }
 }
 
@@ -84,7 +51,6 @@ document.getElementById('excelFile').addEventListener('change', (e) => {
       const workbook = XLSX.read(data, { type: 'array' });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       coilData = XLSX.utils.sheet_to_json(sheet);
-      saveCoilData(coilData, loadedFileName); // Save to local storage
       alert('Excel loaded successfully from local file!');
     };
     reader.readAsArrayBuffer(file);
@@ -98,8 +64,6 @@ function downloadExcel() {
     return;
   }
 
-  // loadedFileName is already set and managed by the load/fetch functions
-  // The fallback is only used if loadedFileName is somehow empty, which it shouldn't be if data is present.
   if (!loadedFileName) {
     loadedFileName = 'downloaded_coil_data.xlsx'; // Fallback name
   }
@@ -111,12 +75,9 @@ function downloadExcel() {
   XLSX.writeFile(workbook, loadedFileName);
 }
 
-// Call loadCoilData first, then try to fetch from URL if local storage is empty or fails
+// Always attempt to fetch from GitHub on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', async () => {
-  const loadedFromLocal = loadCoilData(); // Attempt to load from local storage
-  if (!loadedFromLocal || coilData.length === 0) { // If nothing in local storage or it was empty
-    await fetchAndLoadExcelFromUrl(GITHUB_EXCEL_URL); // Then try to fetch from GitHub
-  }
+  await fetchAndLoadExcelFromUrl(GITHUB_EXCEL_URL);
 });
 
 function searchCoil() {
@@ -157,7 +118,7 @@ function startScanner() {
 
   qrReader = new Html5Qrcode("reader", { verbose: false });
   qrReader.start(
-    { facingMode: "environment" }, // Changed from { exact: "environment" }
+    { facingMode: "environment" },
     {
       fps: 10,
       qrbox: { width: 250, height: 250 }
