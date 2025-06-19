@@ -218,38 +218,3 @@ function showSuggestions() {
     suggestionsDiv.style.display = 'none';
   }
 }
-
-function toggleClearButton() {
-  const input = document.getElementById('coilInput');
-  const clearBtn = document.getElementById('clearInputBtn');
-  clearBtn.style.display = input.value.trim() !== '' ? 'block' : 'none';
-}
-
-function clearInput() {
-  document.getElementById('coilInput').value = '';
-  document.getElementById('result').innerHTML = '';
-  document.getElementById('suggestions').style.display = 'none';
-  document.getElementById('clearInputBtn').style.display = 'none';
-}
-
-// --- QR Fix Update ---
-const originalStartScanner = startScanner;
-startScanner = function () {
-  if (qrReader) closeScanner();
-  const readerDiv = document.getElementById("reader");
-  readerDiv.innerHTML = '';
-  qrReader = new Html5Qrcode("reader", { verbose: false });
-  qrReader.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: { width: 250, height: 250 } },
-    (decodedText) => {
-      document.getElementById('coilInput').value = decodedText;
-      toggleClearButton();
-      searchCoil();
-      closeScanner();
-    },
-    (errorMessage) => {
-      console.warn(`QR error: ${errorMessage}`);
-    }
-  );
-}
