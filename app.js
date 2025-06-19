@@ -4,6 +4,19 @@ let loadedFileName = ''; // Variable to store the loaded file name
 // Define the raw GitHub URL for your Excel file
 const GITHUB_EXCEL_URL = 'https://raw.githubusercontent.com/gmanand23/Coil_Info/main/coil-data.xlsx';
 
+// Function to clear local storage
+function clearLocalStorage() {
+  try {
+    localStorage.removeItem('coilData');
+    localStorage.removeItem('loadedFileName');
+    alert('Local storage cleared successfully!');
+    console.log('Local storage cleared.');
+  } catch (e) {
+    console.error('Error clearing local storage:', e);
+    alert('Failed to clear local storage. Check console for details.');
+  }
+}
+
 // Function to fetch and parse Excel from URL
 async function fetchAndLoadExcelFromUrl(url) {
   try {
