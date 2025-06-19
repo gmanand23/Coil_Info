@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Coil Data Checker</title>
+  <meta http-equiv="Cache-Control" content="no-store" />
   <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
@@ -49,9 +50,9 @@
       font-weight: bold;
       cursor: pointer;
     }
-    
+
     button.clear-button {
-      background-color: #e74c3c; /* Red color for clear button */
+      background-color: #e74c3c;
     }
 
     #suggestions {
@@ -94,7 +95,7 @@
     <h2>Upload Excel File</h2>
     <input type="file" id="excelFile" accept=".xlsx, .xls">
     <p id="fileName" style="color: #ecf0f1;"></p>
-    
+
     <button onclick="downloadExcel()">Download Loaded Excel</button>
     <button class="clear-button" onclick="clearLocalStorage()">Clear Local Storage</button>
 

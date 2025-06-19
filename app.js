@@ -1,17 +1,15 @@
 let coilData = [];
-let loadedFileName = ''; // Variable to store the loaded file name
+let loadedFileName = '';
 
-// Define the raw GitHub URL for your Excel file
-const GITHUB_EXCEL_URL = 'https://raw.githubusercontent.com/gmanand23/Coil_Info/main/coil-data.xlsx';
+// Use cache-busting version of GitHub Excel file
+const GITHUB_EXCEL_URL = 'https://raw.githubusercontent.com/gmanand23/Coil_Info/main/coil-data.xlsx?' + new Date().getTime();
 
-// Function to clear local storage
 function clearLocalStorage() {
   try {
     localStorage.removeItem('coilData');
     localStorage.removeItem('loadedFileName');
     alert('Local storage cleared successfully!');
     console.log('Local storage cleared.');
-    // Optionally reload the data from GitHub after clearing local storage
     fetchAndLoadExcelFromUrl(GITHUB_EXCEL_URL);
   } catch (e) {
     console.error('Error clearing local storage:', e);
@@ -19,21 +17,17 @@ function clearLocalStorage() {
   }
 }
 
-// Function to fetch and parse Excel from URL
 async function fetchAndLoadExcelFromUrl(url) {
   const downloadButton = document.querySelector('button[onclick="downloadExcel()"]');
   if (downloadButton) {
-    downloadButton.disabled = true; // Disable download button during loading
+    downloadButton.disabled = true;
     downloadButton.textContent = 'Loading Data...';
   }
 
   try {
     document.getElementById('fileName').textContent = `Loading data from GitHub...`;
     const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status} - Could not fetch Excel from GitHub.`);
-    }
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
     const arrayBuffer = await response.arrayBuffer();
     const data = new Uint8Array(arrayBuffer);
@@ -41,15 +35,14 @@ async function fetchAndLoadExcelFromUrl(url) {
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     coilData = XLSX.utils.sheet_to_json(sheet);
 
-    // Update loadedFileName based on the URL's last segment
     const urlParts = url.split('/');
-    loadedFileName = urlParts[urlParts.length - 1] || 'coil-data.xlsx';
+    loadedFileName = urlParts[urlParts.length - 1].split('?')[0] || 'coil-data.xlsx';
 
     document.getElementById('fileName').textContent = `Loaded File (from GitHub): ${loadedFileName}`;
     alert('Excel loaded successfully from GitHub!');
     
     if (downloadButton) {
-      downloadButton.disabled = false; // Enable download button after successful load
+      downloadButton.disabled = false;
       downloadButton.textContent = 'Download Loaded Excel';
     }
 
@@ -57,15 +50,14 @@ async function fetchAndLoadExcelFromUrl(url) {
     console.error('Error loading Excel from URL:', error);
     document.getElementById('fileName').textContent = `Failed to load from GitHub.`;
     alert('Failed to load Excel from GitHub. Check console for details.');
-    coilData = []; // Ensure coilData is empty if loading fails
+    coilData = [];
     if (downloadButton) {
-      downloadButton.disabled = true; // Keep disabled if loading fails
+      downloadButton.disabled = true;
       downloadButton.textContent = 'Failed to Load Data';
     }
   }
 }
 
-// Event listener for local Excel file upload
 document.getElementById('excelFile').addEventListener('change', (e) => {
   coilData = [];
   document.getElementById('result').innerHTML = '';
@@ -74,7 +66,7 @@ document.getElementById('excelFile').addEventListener('change', (e) => {
 
   const downloadButton = document.querySelector('button[onclick="downloadExcel()"]');
   if (downloadButton) {
-    downloadButton.disabled = true; // Disable during local upload
+    downloadButton.disabled = true;
     downloadButton.textContent = 'Loading Local File...';
   }
 
@@ -92,11 +84,11 @@ document.getElementById('excelFile').addEventListener('change', (e) => {
       alert('Excel loaded successfully from local file!');
 
       if (downloadButton) {
-        downloadButton.disabled = false; // Enable after successful local load
+        downloadButton.disabled = false;
         downloadButton.textContent = 'Download Loaded Excel';
       }
     };
-    reader.onerror = (evt) => { // Add error handling for FileReader
+    reader.onerror = (evt) => {
       console.error('Error reading local file:', evt);
       alert('Error reading local Excel file.');
       if (downloadButton) {
@@ -106,38 +98,33 @@ document.getElementById('excelFile').addEventListener('change', (e) => {
     };
     reader.readAsArrayBuffer(file);
   } else {
-    // If no file selected, reset button state
     if (downloadButton) {
       downloadButton.disabled = true;
-      downloadButton.textContent = 'Download Loaded Excel'; // Or "No File Selected"
+      downloadButton.textContent = 'Download Loaded Excel';
     }
   }
 });
 
-// Function to download the loaded Excel file
 function downloadExcel() {
   if (coilData.length === 0) {
-    alert('No Excel data to download. Please ensure a file is loaded.');
+    alert('No Excel data to download.');
     return;
   }
 
   if (!loadedFileName) {
-    loadedFileName = 'downloaded_coil_data.xlsx'; // Fallback name
+    loadedFileName = 'downloaded_coil_data.xlsx';
   }
 
   const worksheet = XLSX.utils.json_to_sheet(coilData);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Coil Data");
-
   XLSX.writeFile(workbook, loadedFileName);
 }
 
-// Always attempt to fetch from GitHub on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', async () => {
   await fetchAndLoadExcelFromUrl(GITHUB_EXCEL_URL);
 });
 
-// ... rest of your functions (searchCoil, displayResult, startScanner, closeScanner, showSuggestions) remain the same.
 function searchCoil() {
   const coilNumber = document.getElementById('coilInput').value.trim().toUpperCase();
   const result = coilData.find(row => {
@@ -153,10 +140,10 @@ function searchCoil() {
 function displayResult(data) {
   const resultDiv = document.getElementById('result');
   if (data) {
-    let tableHTML = '<table style="font-family: Comic Sans MS, cursive, sans-serif; width:100%; border-collapse: collapse;">';
-    tableHTML += '<thead><tr><th style="font-family: Comic Sans MS, cursive, sans-serif; border: 1px solid #fff; padding: 8px; color: white;">Field</th><th style="font-family: Comic Sans MS, cursive, sans-serif; border: 1px solid #fff; padding: 8px; color: white;">Value</th></tr></thead><tbody>';
+    let tableHTML = '<table style="font-family: Comic Sans MS; width:100%; border-collapse: collapse;">';
+    tableHTML += '<thead><tr><th style="border: 1px solid #fff; padding: 8px; color: white;">Field</th><th style="border: 1px solid #fff; padding: 8px; color: white;">Value</th></tr></thead><tbody>';
     for (const [key, val] of Object.entries(data)) {
-      tableHTML += `<tr><td style="font-family: Comic Sans MS, cursive, sans-serif; border: 1px solid #fff; padding: 8px; color: white;">${key.trim()}</td><td style="font-family: Comic Sans MS, cursive, sans-serif; border: 1px solid #fff; padding: 8px; color: white;">${val}</td></tr>`;
+      tableHTML += `<tr><td style="border: 1px solid #fff; padding: 8px; color: white;">${key.trim()}</td><td style="border: 1px solid #fff; padding: 8px; color: white;">${val}</td></tr>`;
     }
     tableHTML += '</tbody></table>';
     resultDiv.innerHTML = tableHTML;
@@ -168,20 +155,14 @@ function displayResult(data) {
 let qrReader = null;
 
 function startScanner() {
-  if (qrReader) {
-    closeScanner();
-  }
+  if (qrReader) closeScanner();
   const readerDiv = document.getElementById("reader");
   readerDiv.innerHTML = '';
-
   qrReader = new Html5Qrcode("reader", { verbose: false });
   qrReader.start(
     { facingMode: "environment" },
-    {
-      fps: 10,
-      qrbox: { width: 250, height: 250 }
-    },
-    (decodedText, decodedResult) => {
+    { fps: 10, qrbox: { width: 250, height: 250 } },
+    (decodedText) => {
       document.getElementById('coilInput').value = decodedText;
       searchCoil();
       closeScanner();
