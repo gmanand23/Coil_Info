@@ -1,6 +1,7 @@
 let coilData = [];
 let loadedFileName = '';
 
+// Use cache-busting version of GitHub Excel file
 const GITHUB_EXCEL_URL = 'https://raw.githubusercontent.com/gmanand23/Coil_Info/main/coil-data.xlsx?' + new Date().getTime();
 
 function clearLocalStorage() {
@@ -8,8 +9,10 @@ function clearLocalStorage() {
     localStorage.removeItem('coilData');
     localStorage.removeItem('loadedFileName');
     alert('Local storage cleared successfully!');
+    console.log('Local storage cleared.');
     fetchAndLoadExcelFromUrl(GITHUB_EXCEL_URL);
   } catch (e) {
+    console.error('Error clearing local storage:', e);
     alert('Failed to clear local storage. Check console for details.');
   }
 }
@@ -42,9 +45,11 @@ async function fetchAndLoadExcelFromUrl(url) {
       downloadButton.disabled = false;
       downloadButton.textContent = 'Download Loaded Excel';
     }
+
   } catch (error) {
+    console.error('Error loading Excel from URL:', error);
     document.getElementById('fileName').textContent = `Failed to load from GitHub.`;
-    alert('Failed to load Excel from GitHub.');
+    alert('Failed to load Excel from GitHub. Check console for details.');
     coilData = [];
     if (downloadButton) {
       downloadButton.disabled = true;
@@ -83,7 +88,8 @@ document.getElementById('excelFile').addEventListener('change', (e) => {
         downloadButton.textContent = 'Download Loaded Excel';
       }
     };
-    reader.onerror = () => {
+    reader.onerror = (evt) => {
+      console.error('Error reading local file:', evt);
       alert('Error reading local Excel file.');
       if (downloadButton) {
         downloadButton.disabled = true;
@@ -111,7 +117,7 @@ function downloadExcel() {
 
   const worksheet = XLSX.utils.json_to_sheet(coilData);
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Coil Data');
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Coil Data");
   XLSX.writeFile(workbook, loadedFileName);
 }
 
@@ -150,18 +156,18 @@ let qrReader = null;
 
 function startScanner() {
   if (qrReader) closeScanner();
-  const readerDiv = document.getElementById('reader');
+  const readerDiv = document.getElementById("reader");
   readerDiv.innerHTML = '';
-  qrReader = new Html5Qrcode('reader', { verbose: false });
+  qrReader = new Html5Qrcode("reader", { verbose: false });
   qrReader.start(
-    { facingMode: 'environment' },
+    { facingMode: "environment" },
     { fps: 10, qrbox: { width: 250, height: 250 } },
     (decodedText) => {
       document.getElementById('coilInput').value = decodedText;
-      toggleClearButton();
+      toggleClearButton(); // Ensure clear button shows if text is scanned
       searchCoil();
       closeScanner();
-      scrollToResult();
+      scrollToResult(); // Scroll to the result after scan and search
     },
     (errorMessage) => {
       console.warn(`QR error: ${errorMessage}`);
@@ -173,9 +179,9 @@ function closeScanner() {
   if (qrReader) {
     qrReader.stop().then(() => {
       qrReader.clear();
-      document.getElementById('reader').innerHTML = '';
+      document.getElementById("reader").innerHTML = '';
       qrReader = null;
-    }).catch(err => console.error('Error stopping scanner', err));
+    }).catch(err => console.error("Error stopping scanner", err));
   }
 }
 
@@ -206,7 +212,7 @@ function showSuggestions() {
         document.getElementById('coilInput').value = s;
         suggestionsDiv.style.display = 'none';
         searchCoil();
-        toggleClearButton();
+        toggleClearButton(); // Ensure clear button shows when a suggestion is clicked
       };
       suggestionsDiv.appendChild(div);
     });
