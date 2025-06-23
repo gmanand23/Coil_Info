@@ -1,19 +1,28 @@
 let coilData = [];
 let loadedFileName = '';
 
-// Use cache-busting version of GitHub Excel file
 const GITHUB_EXCEL_URL = 'https://raw.githubusercontent.com/gmanand23/Coil_Info/main/coil-data.xlsx?' + new Date().getTime();
+
+function resetApp() {
+  try {
+    localStorage.clear(); // Clears all localStorage keys
+    alert('App data cleared. Reloading now...');
+    location.reload(true); // Force reload from server (if browser supports)
+  } catch (e) {
+    console.error('Error resetting app:', e);
+    alert('Failed to reset. Check console.');
+  }
+}
 
 function clearLocalStorage() {
   try {
     localStorage.removeItem('coilData');
     localStorage.removeItem('loadedFileName');
-    alert('Local storage cleared successfully!');
-    console.log('Local storage cleared.');
+    alert('Local Excel data cleared.');
     fetchAndLoadExcelFromUrl(GITHUB_EXCEL_URL);
   } catch (e) {
     console.error('Error clearing local storage:', e);
-    alert('Failed to clear local storage. Check console for details.');
+    alert('Failed to clear local storage.');
   }
 }
 
@@ -38,6 +47,9 @@ async function fetchAndLoadExcelFromUrl(url) {
     const urlParts = url.split('/');
     loadedFileName = urlParts[urlParts.length - 1].split('?')[0] || 'coil-data.xlsx';
 
+    localStorage.setItem('coilData', JSON.stringify(coilData));
+    localStorage.setItem('loadedFileName', loadedFileName);
+
     document.getElementById('fileName').textContent = `Loaded File (from GitHub): ${loadedFileName}`;
     alert('Excel loaded successfully from GitHub!');
 
@@ -49,7 +61,7 @@ async function fetchAndLoadExcelFromUrl(url) {
   } catch (error) {
     console.error('Error loading Excel from URL:', error);
     document.getElementById('fileName').textContent = `Failed to load from GitHub.`;
-    alert('Failed to load Excel from GitHub. Check console for details.');
+    alert('Failed to load Excel from GitHub.');
     coilData = [];
     if (downloadButton) {
       downloadButton.disabled = true;
@@ -81,8 +93,11 @@ document.getElementById('excelFile').addEventListener('change', (e) => {
       const workbook = XLSX.read(data, { type: 'array' });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       coilData = XLSX.utils.sheet_to_json(sheet);
-      alert('Excel loaded successfully from local file!');
 
+      localStorage.setItem('coilData', JSON.stringify(coilData));
+      localStorage.setItem('loadedFileName', loadedFileName);
+
+      alert('Excel loaded successfully from local file!');
       if (downloadButton) {
         downloadButton.disabled = false;
         downloadButton.textContent = 'Download Loaded Excel';
@@ -122,7 +137,16 @@ function downloadExcel() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  await fetchAndLoadExcelFromUrl(GITHUB_EXCEL_URL);
+  const cachedData = localStorage.getItem('coilData');
+  const cachedFileName = localStorage.getItem('loadedFileName');
+
+  if (cachedData && cachedFileName) {
+    coilData = JSON.parse(cachedData);
+    loadedFileName = cachedFileName;
+    document.getElementById('fileName').textContent = `Loaded from Local Storage: ${loadedFileName}`;
+  } else {
+    await fetchAndLoadExcelFromUrl(GITHUB_EXCEL_URL);
+  }
 });
 
 function searchCoil() {
@@ -164,10 +188,10 @@ function startScanner() {
     { fps: 10, qrbox: { width: 250, height: 250 } },
     (decodedText) => {
       document.getElementById('coilInput').value = decodedText;
-      toggleClearButton(); // Ensure clear button shows if text is scanned
+      toggleClearButton();
       searchCoil();
       closeScanner();
-      scrollToResult(); // Scroll to the result after scan and search
+      scrollToResult();
     },
     (errorMessage) => {
       console.warn(`QR error: ${errorMessage}`);
@@ -212,7 +236,7 @@ function showSuggestions() {
         document.getElementById('coilInput').value = s;
         suggestionsDiv.style.display = 'none';
         searchCoil();
-        toggleClearButton(); // Ensure clear button shows when a suggestion is clicked
+        toggleClearButton();
       };
       suggestionsDiv.appendChild(div);
     });

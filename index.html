@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Coil Data Checker</title>
   <meta http-equiv="Cache-Control" content="no-store" />
   <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
@@ -21,6 +21,17 @@
       padding: 20px 10px;
     }
 
+    .header-title {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .header-title h1 {
+      font-size: 22px;
+      margin: 0;
+      line-height: 1.4;
+    }
+
     .container {
       background: rgba(255, 255, 255, 0.1);
       padding: 20px;
@@ -37,6 +48,7 @@
       border: none;
       border-radius: 8px;
       font-size: 16px;
+      font-family: "Comic Sans MS", cursive, sans-serif;
     }
 
     input[type="text"], input[type="file"] {
@@ -91,10 +103,14 @@
   </style>
 </head>
 <body>
+  <div class="header-title">
+    <h1>A.S. Shipping Agencies Pvt Ltd,<br>(Greenways Group)</h1>
+  </div>
+
   <div class="container">
     <h2>Enter or Scan Coil Number</h2>
     <div style="position: relative;">
-      <input type="text" id="coilInput" placeholder="Enter Coil Number" oninput="showSuggestions(); toggleClearButton();" autocomplete="off">
+      <input type="text" id="coilInput" placeholder="Enter Coil Number" oninput="showSuggestions(); toggleClearButton();" autocomplete="off" />
       <div id="suggestions"></div>
     </div>
 
@@ -107,11 +123,12 @@
     <div id="result"></div>
 
     <h2>Upload Excel File</h2>
-    <input type="file" id="excelFile" accept=".xlsx, .xls">
+    <input type="file" id="excelFile" accept=".xlsx, .xls" />
     <p id="fileName" style="color: #ecf0f1;"></p>
 
     <button onclick="downloadExcel()">Download Loaded Excel</button>
-    <button class="clear-button" onclick="clearLocalStorage()">Clear Local Storage</button>
+    <button class="clear-button" onclick="clearLocalStorage()">Clear Excel Storage Only</button>
+    <button class="clear-button" onclick="resetApp()">Clear All & Reload from GitHub</button>
   </div>
 
   <script src="app.js"></script>
