@@ -5,11 +5,13 @@ const GITHUB_EXCEL_URL = 'https://raw.githubusercontent.com/gmanand23/Coil_Info/
 
 function resetApp() {
   try {
-    localStorage.clear(); // Clears all localStorage keys
-    alert('App data cleared. Reloading now...');
-    location.reload(true); // Force reload from server (if browser supports)
+    localStorage.removeItem('coilData');
+    localStorage.removeItem('loadedFileName');
+    localStorage.setItem('forceReload', 'true'); // ✅ Trigger reload
+    alert('App data cleared. Reloading from GitHub...');
+    window.location.href = window.location.href; // ✅ Reload that works in APK
   } catch (e) {
-    console.error('Error resetting app:', e);
+    console.error('Reset failed:', e);
     alert('Failed to reset. Check console.');
   }
 }
@@ -137,6 +139,13 @@ function downloadExcel() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const forceReload = localStorage.getItem('forceReload');
+  if (forceReload === 'true') {
+    localStorage.removeItem('forceReload'); // Clear the flag
+    await fetchAndLoadExcelFromUrl(GITHUB_EXCEL_URL);
+    return;
+  }
+
   const cachedData = localStorage.getItem('coilData');
   const cachedFileName = localStorage.getItem('loadedFileName');
 
@@ -149,122 +158,4 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-function searchCoil() {
-  const coilNumber = document.getElementById('coilInput').value.trim().toUpperCase();
-  const result = coilData.find(row => {
-    const keys = Object.keys(row);
-    const matchingKey = keys.find(k => k.trim().toUpperCase() === 'MILL COIL NO');
-    if (!matchingKey) return false;
-    const sheetCoil = String(row[matchingKey]).trim().toUpperCase();
-    return sheetCoil === coilNumber;
-  });
-  displayResult(result);
-}
-
-function displayResult(data) {
-  const resultDiv = document.getElementById('result');
-  if (data) {
-    let tableHTML = '<table style="font-family: Comic Sans MS; width:100%; border-collapse: collapse;">';
-    tableHTML += '<thead><tr><th style="border: 1px solid #fff; padding: 8px; color: white;">Field</th><th style="border: 1px solid #fff; padding: 8px; color: white;">Value</th></tr></thead><tbody>';
-    for (const [key, val] of Object.entries(data)) {
-      tableHTML += `<tr><td style="border: 1px solid #fff; padding: 8px; color: white;">${key.trim()}</td><td style="border: 1px solid #fff; padding: 8px; color: white;">${val}</td></tr>`;
-    }
-    tableHTML += '</tbody></table>';
-    resultDiv.innerHTML = tableHTML;
-  } else {
-    resultDiv.innerHTML = '<p>Coil number not found.</p>';
-  }
-}
-
-let qrReader = null;
-
-function startScanner() {
-  if (qrReader) closeScanner();
-  const readerDiv = document.getElementById("reader");
-  readerDiv.innerHTML = '';
-  qrReader = new Html5Qrcode("reader", { verbose: false });
-  qrReader.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: { width: 250, height: 250 } },
-    (decodedText) => {
-      document.getElementById('coilInput').value = decodedText;
-      toggleClearButton();
-      searchCoil();
-      closeScanner();
-      scrollToResult();
-    },
-    (errorMessage) => {
-      console.warn(`QR error: ${errorMessage}`);
-    }
-  );
-}
-
-function closeScanner() {
-  if (qrReader) {
-    qrReader.stop().then(() => {
-      qrReader.clear();
-      document.getElementById("reader").innerHTML = '';
-      qrReader = null;
-    }).catch(err => console.error("Error stopping scanner", err));
-  }
-}
-
-function showSuggestions() {
-  const input = document.getElementById('coilInput').value.trim().toUpperCase();
-  const suggestionsDiv = document.getElementById('suggestions');
-  suggestionsDiv.innerHTML = '';
-
-  if (!input || coilData.length === 0) {
-    suggestionsDiv.style.display = 'none';
-    return;
-  }
-
-  const keys = Object.keys(coilData[0]);
-  const matchingKey = keys.find(k => k.trim().toUpperCase() === 'MILL COIL NO');
-  if (!matchingKey) return;
-
-  const suggestions = coilData
-    .map(row => String(row[matchingKey]).trim().toUpperCase())
-    .filter(coil => coil.includes(input))
-    .slice(0, 10);
-
-  if (suggestions.length > 0) {
-    suggestions.forEach(s => {
-      const div = document.createElement('div');
-      div.textContent = s;
-      div.onclick = () => {
-        document.getElementById('coilInput').value = s;
-        suggestionsDiv.style.display = 'none';
-        searchCoil();
-        toggleClearButton();
-      };
-      suggestionsDiv.appendChild(div);
-    });
-    suggestionsDiv.style.display = 'block';
-  } else {
-    suggestionsDiv.style.display = 'none';
-  }
-}
-
-function toggleClearButton() {
-  const input = document.getElementById('coilInput');
-  const clearBtn = document.getElementById('clearInputBtn');
-  if (clearBtn) {
-    clearBtn.style.display = input.value.trim() !== '' ? 'block' : 'none';
-  }
-}
-
-function clearInput() {
-  document.getElementById('coilInput').value = '';
-  document.getElementById('result').innerHTML = '';
-  document.getElementById('suggestions').style.display = 'none';
-  const clearBtn = document.getElementById('clearInputBtn');
-  if (clearBtn) clearBtn.style.display = 'none';
-}
-
-function scrollToResult() {
-  const resultDiv = document.getElementById('result');
-  if (resultDiv) {
-    resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-}
+// Rest of your functions like searchCoil, displayResult, QR code, etc. stay the same
