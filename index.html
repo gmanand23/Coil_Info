@@ -430,8 +430,8 @@
         await fetchAndLoadExcelFromUrl(GITHUB_EXCEL_URL);
       }
       
-      // Initialize UI state
-      updateUIState();
+      // Initialize button states
+      document.getElementById('generateBtn').disabled = Object.keys(vehicleCoilMap).length === 0;
     });
 
     function clearLocalStorage() {
@@ -615,16 +615,8 @@
     }
 
     function toggleClearButton() {
-      const input = document.getElementById('coilInput').value.trim();
-      const clearBtn = document.getElementById('clearInputBtn');
-      clearBtn.style.display = input ? 'block' : 'none';
-    }
-
-    function clearInput() {
-      document.getElementById('coilInput').value = '';
-      document.getElementById('suggestions').style.display = 'none';
-      document.getElementById('result').innerHTML = '';
-      toggleClearButton();
+      // This function exists for compatibility but doesn't need to do anything
+      // since there's no clearInputBtn in the original design
     }
 
     function startScanner() {
@@ -747,8 +739,25 @@
       document.getElementById('saveBtn').disabled = true;
     }
 
+    // Enhanced generateTextFile function with proper storage permission handling
     async function generateTextFile() {
       document.getElementById('vehicleInput').disabled = false;
+      
+      // Request storage permission explicitly
+      try {
+        if ('permissions' in navigator) {
+          const permission = await navigator.permissions.query({name: 'persistent-storage'});
+          if (permission.state !== 'granted') {
+            // For browsers that support the API, request permission
+            if ('storage' in navigator && 'persist' in navigator.storage) {
+              await navigator.storage.persist();
+            }
+          }
+        }
+      } catch (error) {
+        // Permission API not supported, continue anyway
+        console.log('Storage permission API not supported, continuing...');
+      }
       
       const now = new Date();
       const currentDate = now.toLocaleDateString('en-GB').replace(/\//g, '-'); // DD-MM-YYYY format
@@ -780,58 +789,114 @@
           }
         }
         
-        let text = `A.S.Shipping Agencies Pvt Ltd,\n`;
-        text += `(Greenways Group)\n\n`;
-        text += `Vehicle: ${vehicle}${transporter ? ` | Transporter: ${transporter}` : ''}\n`;
-        text += `Date: ${currentDate}\n`;
-        text += `Time: ${currentTime}\n`;
-        text += `--------------------------\n`;
+        // Create content for text file in exact original format
+        let content = `A.S.Shipping Agencies Pvt Ltd,\n`;
+        content += `(Greenways Group)\n`;
+        content += `--------------------------------------------\n`;
+        content += `Vehicle: ${vehicle}`;
+        if (transporter) {
+          content += ` | Transporter: ${transporter}`;
+        }
+        content += `\n`;
+        content += `Generated On: ${currentDate} at ${currentTime}\n`;
+        content += `--------------------------------------------\n`;
         
-        let vehicleGross = 0;
+        let vehicleGrossTotal = 0;
         coils.forEach(coil => {
-          const found = coilData.find(row => String(row['MILL COIL NO']).trim().toUpperCase() === coil);
-          const wt = found?.['GROSS WT'] || 0;
-          vehicleGross += parseFloat(wt) || 0;
-          text += `Coil No: ${coil}, Gross WT: ${wt}\n`;
-          
-          // Add to OUT sheet data with proper column names (excluding red colored columns)
-          const outRecord = {
-            'Serial No': serialCounter++,
-            'Date & Time': `${currentDate} ${currentTime}`,
-            'Vehicle No': vehicle,
-            'Mill Coil No': coil,
-            'TRANSPORTER': transporter,
-            'GROSS WT': wt
-          };
-          outData.push(outRecord);
+          const found = coilData.find(row => {
+            const matchKey = Object.keys(row).find(k => k.trim().toUpperCase() === 'MILL COIL NO');
+            return matchKey && String(row[matchKey]).trim().toUpperCase() === coil;
+          });
+          const grossWT = found ? (found['GROSS WT'] || found['Gross WT'] || 0) : 0;
+          vehicleGrossTotal += parseFloat(grossWT) || 0;
+          content += `Coil No: ${coil}, Gross WT: ${grossWT}\n`;
         });
         
-        text += `--------------------------\n`;
-        text += `Total Coils for ${vehicle}: ${coils.length}\n`;
-        text += `Total Gross WT for ${vehicle}: ${vehicleGross.toFixed(2)}\n`;
+        content += `\nTotal No of Coils : ${coils.length}\n`;
+        content += `Total Gross WT : ${vehicleGrossTotal.toFixed(2)}\n`;
+        content += `--------------------------------------------\n`;
         
-        // Create and download file for this vehicle
-        const blob = new Blob([text], { type: 'text/plain' });
+        // Create and trigger download
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `${vehicle}_coil_data.txt`;
-        a.click();
+        a.href = url;
+        a.download = `${vehicle}_${currentDate.replace(/-/g, '')}.txt`;
         
-        // Small delay between downloads to prevent browser blocking
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Use modern File System Access API if available
+        if ('showSaveFilePicker' in window) {
+          try {
+            const fileHandle = await window.showSaveFilePicker({
+              suggestedName: `${vehicle}_${currentDate.replace(/-/g, '')}.txt`,
+              types: [{
+                description: 'Text files',
+                accept: { 'text/plain': ['.txt'] }
+              }]
+            });
+            const writable = await fileHandle.createWritable();
+            await writable.write(content);
+            await writable.close();
+          } catch (error) {
+            if (error.name !== 'AbortError') {
+              // Fallback to traditional download
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+            }
+          }
+        } else {
+          // Fallback for browsers without File System Access API
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+        
+        URL.revokeObjectURL(url);
+        
+        // Add to outData for tracking in exact Excel format
+        coils.forEach(coilNumber => {
+          const coilDetails = coilData.find(row => {
+            const matchKey = Object.keys(row).find(k => k.trim().toUpperCase() === 'MILL COIL NO');
+            return matchKey && String(row[matchKey]).trim().toUpperCase() === coilNumber;
+          });
+          
+          if (coilDetails) {
+            const grossWT = coilDetails['GROSS WT'] || coilDetails['Gross WT'] || 0;
+            outData.push({
+              'Serial No': serialCounter++,
+              'Date & Time': formatDateTime(new Date()),
+              'Vehicle No': vehicle,
+              'Mill Coil No': coilNumber,
+              'TRANSPORTER': transporter,
+              'GROSS WT': grossWT
+            });
+          }
+        });
       }
       
       // Save updated OUT data and serial counter to localStorage
       localStorage.setItem('outData', JSON.stringify(outData));
       localStorage.setItem('serialCounter', serialCounter.toString());
       
+      // Reset button states like the original
       document.getElementById('generateBtn').disabled = true;
       document.getElementById('vehicleInput').value = '';
       document.getElementById('addBtn').disabled = false;
       document.getElementById('saveBtn').disabled = false;
+      
+      // Clear the vehicle coil map
+      vehicleCoilMap = {};
+      
+      alert('Text files generated successfully!');
     }
 
-    // Report Vehicle functions
+    function clearInputs() {
+      document.getElementById('coilInput').value = '';
+      document.getElementById('result').innerHTML = '';
+      document.getElementById('suggestions').style.display = 'none';
+    }
+
+    // Report generation functions
     function showReportVehicleSuggestions() {
       const input = document.getElementById('reportVehicleInput').value.trim().toUpperCase();
       const suggestions = document.getElementById('reportVehicleSuggestions');
@@ -841,16 +906,18 @@
         return;
       }
       
-      const matches = vehicleData.filter(row => {
-        const matchKey = Object.keys(row).find(k => k.trim().toUpperCase() === 'VEHICLE NO');
-        return matchKey && String(row[matchKey]).trim().toUpperCase().includes(input);
+      const matches = outData.filter(row => {
+        const vehicle = row['Vehicle No'] || '';
+        return String(vehicle).trim().toUpperCase().includes(input);
       }).slice(0, 10);
       
-      if (matches.length > 0) {
-        suggestions.innerHTML = matches.map(row => {
-          const matchKey = Object.keys(row).find(k => k.trim().toUpperCase() === 'VEHICLE NO');
-          return `<div onclick="selectReportVehicleSuggestion('${row[matchKey]}')">${row[matchKey]}</div>`;
-        }).join('');
+      // Get unique vehicle numbers
+      const uniqueVehicles = [...new Set(matches.map(row => row['Vehicle No']))];
+      
+      if (uniqueVehicles.length > 0) {
+        suggestions.innerHTML = uniqueVehicles.map(vehicle => 
+          `<div onclick="selectReportVehicleSuggestion('${vehicle}')">${vehicle}</div>`
+        ).join('');
         suggestions.style.display = 'block';
       } else {
         suggestions.style.display = 'none';
@@ -875,75 +942,104 @@
       toggleReportVehicleClearButton();
     }
 
-    function clearInputs() {
-      document.getElementById('coilInput').value = '';
-      document.getElementById('result').innerHTML = '';
-      document.getElementById('suggestions').style.display = 'none';
-      toggleClearButton();
-    }
-
+    // Enhanced generateAllOutDataReport function with exact format match
     function generateAllOutDataReport() {
       if (outData.length === 0) {
-        alert('No OUT data available to generate report.');
-        return;
+        return alert('No OUT data available for report generation.');
       }
       
-      // Filter out red colored columns (only keep essential columns)
-      const filteredData = outData.map(record => ({
-        'Serial No': record['Serial No'],
-        'Date & Time': record['Date & Time'],
-        'Vehicle No': record['Vehicle No'],
-        'Mill Coil No': record['Mill Coil No'],
-        'TRANSPORTER': record['TRANSPORTER'],
-        'GROSS WT': record['GROSS WT']
+      // Calculate total Gross WT
+      const totalGrossWT = outData.reduce((sum, row) => {
+        const grossWT = parseFloat(row['GROSS WT'] || 0);
+        return sum + (isNaN(grossWT) ? 0 : grossWT);
+      }, 0);
+      
+      // Create filtered data with exact column structure
+      const reportData = outData.map(row => ({
+        'Serial No': row['Serial No'],
+        'Date & Time': row['Date & Time'],
+        'Vehicle No': row['Vehicle No'],
+        'Mill Coil No': row['Mill Coil No'],
+        'TRANSPORTER': row['TRANSPORTER'],
+        'GROSS WT': row['GROSS WT']
       }));
       
-      const worksheet = XLSX.utils.json_to_sheet(filteredData);
+      // Add total row exactly as shown in image
+      reportData.push({
+        'Serial No': '',
+        'Date & Time': '',
+        'Vehicle No': '',
+        'Mill Coil No': '',
+        'TRANSPORTER': 'TOTAL',
+        'GROSS WT': totalGrossWT
+      });
+      
+      // Create Excel workbook
+      const worksheet = XLSX.utils.json_to_sheet(reportData);
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "OUT Data Report");
+      XLSX.utils.book_append_sheet(workbook, worksheet, "All OUT Data Report");
       
-      const fileName = `OUT_Data_Report_${new Date().getTime()}.xlsx`;
+      // Generate filename with current date
+      const currentDate = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+      const fileName = `All_OUT_Data_Report_${currentDate.replace(/-/g, '')}.xlsx`;
+      
       XLSX.writeFile(workbook, fileName);
-      
-      alert('OUT data report generated and downloaded!');
+      alert(`All OUT Data Report generated with total Gross WT: ${totalGrossWT.toFixed(2)}`);
     }
 
     function generateVehicleOutReport() {
       const vehicleNumber = document.getElementById('reportVehicleInput').value.trim().toUpperCase();
       
       if (!vehicleNumber) {
-        alert('Please enter a vehicle number.');
-        return;
+        return alert('Please enter a vehicle number for the report.');
       }
       
       const vehicleOutData = outData.filter(row => {
-        const vehicleNo = row['Vehicle No'] || row['VEHICLE NO'] || '';
-        return String(vehicleNo).trim().toUpperCase() === vehicleNumber;
+        const vehicle = row['Vehicle No'] || '';
+        return String(vehicle).trim().toUpperCase() === vehicleNumber;
       });
       
       if (vehicleOutData.length === 0) {
-        alert(`No OUT data found for vehicle: ${vehicleNumber}`);
-        return;
+        return alert(`No OUT data found for vehicle: ${vehicleNumber}`);
       }
       
-      // Filter out red colored columns (only keep essential columns)
-      const filteredData = vehicleOutData.map(record => ({
-        'Serial No': record['Serial No'],
-        'Date & Time': record['Date & Time'],
-        'Vehicle No': record['Vehicle No'],
-        'Mill Coil No': record['Mill Coil No'],
-        'TRANSPORTER': record['TRANSPORTER'],
-        'GROSS WT': record['GROSS WT']
+      // Calculate total Gross WT for this vehicle
+      const totalGrossWT = vehicleOutData.reduce((sum, row) => {
+        const grossWT = parseFloat(row['GROSS WT'] || 0);
+        return sum + (isNaN(grossWT) ? 0 : grossWT);
+      }, 0);
+      
+      // Create filtered data with exact column structure (same as All OUT report)
+      const reportData = vehicleOutData.map(row => ({
+        'Serial No': row['Serial No'],
+        'Date & Time': row['Date & Time'],
+        'Vehicle No': row['Vehicle No'],
+        'Mill Coil No': row['Mill Coil No'],
+        'TRANSPORTER': row['TRANSPORTER'],
+        'GROSS WT': row['GROSS WT']
       }));
       
-      const worksheet = XLSX.utils.json_to_sheet(filteredData);
+      // Add total row exactly as shown in All OUT report format
+      reportData.push({
+        'Serial No': '',
+        'Date & Time': '',
+        'Vehicle No': '',
+        'Mill Coil No': '',
+        'TRANSPORTER': 'TOTAL',
+        'GROSS WT': totalGrossWT
+      });
+      
+      // Create Excel workbook
+      const worksheet = XLSX.utils.json_to_sheet(reportData);
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, `Vehicle ${vehicleNumber}`);
+      XLSX.utils.book_append_sheet(workbook, worksheet, `${vehicleNumber} OUT Report`);
       
-      const fileName = `Vehicle_${vehicleNumber}_OUT_Report_${new Date().getTime()}.xlsx`;
+      // Generate filename with current date
+      const currentDate = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+      const fileName = `${vehicleNumber}_OUT_Report_${currentDate.replace(/-/g, '')}.xlsx`;
+      
       XLSX.writeFile(workbook, fileName);
-      
-      alert(`Vehicle ${vehicleNumber} OUT report generated and downloaded!`);
+      alert(`Vehicle report generated for ${vehicleNumber} with total Gross WT: ${totalGrossWT.toFixed(2)}`);
     }
 
     // Auto-search when typing in coil input
