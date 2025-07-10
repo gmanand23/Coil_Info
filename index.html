@@ -318,6 +318,7 @@
 <body>
   <div class="header-title">
     <h1>A.S.Shipping Agencies Pvt Ltd,<br>(Greenways Group)</h1>
+    <div style="font-size: 12px; color: #ecf0f1; margin-top: 5px;">Version: 3.1</div>
   </div>
 
   <div class="container">
@@ -379,6 +380,9 @@
         <button class="third-width clear-button" onclick="clearLocalStorage()">Clear Storage</button>
         <button class="third-width clear-button" onclick="resetApp()">Clear All</button>
       </div>
+      <div class="button-row">
+        <button class="half-width" onclick="updateAppFromGithub()" style="background-color: #3498db;">Update App</button>
+      </div>
     </div>
   </div>
 
@@ -393,6 +397,7 @@
     let html5QrCode;
     let serialCounter = 1;
     const GITHUB_EXCEL_URL = 'https://raw.githubusercontent.com/gmanand23/Coil_Info/main/coil-data.xlsx?' + new Date().getTime();
+    const GITHUB_HTML_URL = 'https://raw.githubusercontent.com/gmanand23/Coil_Info/main/index.html?' + new Date().getTime();
 
     // Function to format date in DD-MM-YYYY HH:MM:SS AM/PM format
     function formatDateTime(date) {
@@ -1041,6 +1046,70 @@
       XLSX.writeFile(workbook, fileName);
       alert(`Vehicle report generated for ${vehicleNumber} with total Gross WT: ${totalGrossWT.toFixed(2)}`);
     }
+
+    // Update app from GitHub
+    async function updateAppFromGithub() {
+      if (!confirm('This will update the app to the latest version from GitHub. Current data will be preserved. Continue?')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(GITHUB_HTML_URL);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const htmlContent = await response.text();
+        
+        // Extract version from the new HTML
+        const versionMatch = htmlContent.match(/Version:\s*(\d+\.\d+)/);
+        const newVersion = versionMatch ? versionMatch[1] : 'Unknown';
+        
+        // Save current data before update
+        const currentData = {
+          coilData: localStorage.getItem('coilData'),
+          vehicleData: localStorage.getItem('vehicleData'),
+          outData: localStorage.getItem('outData'),
+          loadedFileName: localStorage.getItem('loadedFileName'),
+          serialCounter: localStorage.getItem('serialCounter')
+        };
+        
+        // Create a new HTML blob and replace current page
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        
+        // Store data in sessionStorage for the new page
+        sessionStorage.setItem('preservedData', JSON.stringify(currentData));
+        sessionStorage.setItem('justUpdated', 'true');
+        
+        // Navigate to the new version
+        window.location.href = url;
+        
+      } catch (error) {
+        console.error('Error updating app:', error);
+        alert('Failed to update app from GitHub. Please check your internet connection and try again.');
+      }
+    }
+
+    // Check if app was just updated and restore data
+    document.addEventListener('DOMContentLoaded', () => {
+      if (sessionStorage.getItem('justUpdated') === 'true') {
+        const preservedData = JSON.parse(sessionStorage.getItem('preservedData') || '{}');
+        
+        // Restore preserved data
+        Object.entries(preservedData).forEach(([key, value]) => {
+          if (value) {
+            localStorage.setItem(key, value);
+          }
+        });
+        
+        // Clean up session storage
+        sessionStorage.removeItem('justUpdated');
+        sessionStorage.removeItem('preservedData');
+        
+        alert('App updated successfully! Your data has been preserved.');
+      }
+    });
 
     // Auto-search when typing in coil input
     document.getElementById('coilInput').addEventListener('input', function() {
