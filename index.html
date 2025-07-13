@@ -395,6 +395,7 @@
             border: 1px solid #bee5eb;
         }
     </style>
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
 </head>
 <body>
     <div class="header-title">
@@ -1448,12 +1449,22 @@
                 // Store all data in GitHub Excel OUT sheet
                 if (outEntries.length > 0) {
                     try {
-                        showMessage('Saving data to GitHub...', 'info');
-                        await window.githubAPI.storeOutData(outEntries);
-                        showMessage('Data successfully saved to GitHub Excel file', 'success');
+                        // Store in local outData array first
+                        if (!outData) outData = [];
+                        outData = [...outData, ...outEntries];
+                        
+                        // Try GitHub sync but don't block on failure
+                        try {
+                            showMessage('Saving data to GitHub...', 'info');
+                            await window.githubAPI.storeOutData(outEntries);
+                            showMessage('Data successfully saved to GitHub Excel file', 'success');
+                        } catch (error) {
+                            console.error('Failed to save to GitHub:', error);
+                            // Don't show error message to user - just continue with local data
+                        }
                     } catch (error) {
-                        console.error('Failed to save to GitHub:', error);
-                        showMessage('Warning: Could not save to GitHub: ' + error.message, 'error');
+                        console.error('Error handling outData:', error);
+                        // Don't block the process
                     }
                 }
                 
@@ -1560,9 +1571,19 @@
             try {
                 showMessage('Generating all OUT data report...', 'info');
                 
-                const githubOutData = await window.githubAPI.loadOutData();
+                // Use local outData if available, otherwise try to get from GitHub
+                let reportData = outData || [];
                 
-                if (githubOutData.length === 0) {
+                if (reportData.length === 0) {
+                    try {
+                        reportData = await window.githubAPI.loadOutData();
+                    } catch (error) {
+                        console.error('Error loading GitHub OUT data:', error);
+                        // Continue with empty data if both local and GitHub fail
+                    }
+                }
+                
+                if (reportData.length === 0) {
                     showMessage('⚠️ WARNING: No OUT data found to generate report', 'error');
                     return;
                 }
@@ -1582,7 +1603,7 @@
                 content += '=========    ===========           ===========    ==========      =======      ========\n';
                 
                 // Data rows with proper alignment
-                githubOutData.forEach(row => {
+                reportData.forEach(row => {
                     const serialNo = String(row['SERIAL NO'] || '').padEnd(12);
                     const dateTime = String(row['DATE & TIME'] || '').padEnd(21);
                     const transporter = String(row['TRANSPORTER'] || '').padEnd(14);
@@ -1596,11 +1617,11 @@
                 // Summary section
                 content += '\nSUMMARY FOR ALL VEHICLES\n';
                 content += '===============================\n';
-                content += `Total Records: ${githubOutData.length}\n`;
-                content += `Total Coils: ${githubOutData.length}\n`;
+                content += `Total Records: ${reportData.length}\n`;
+                content += `Total Coils: ${reportData.length}\n`;
                 
                 // Calculate total gross weight
-                const totalGrossWT = githubOutData.reduce((sum, row) => {
+                const totalGrossWT = reportData.reduce((sum, row) => {
                     return sum + (parseFloat(row['GROSS WT']) || 0);
                 }, 0);
                 content += `Total Gross WT: ${totalGrossWT.toFixed(2)}\n`;
@@ -1627,8 +1648,19 @@
                 
                 showMessage('Generating vehicle OUT report...', 'info');
                 
-                const githubOutData = await window.githubAPI.loadOutData();
-                const vehicleOutData = githubOutData.filter(row => 
+                // Use local outData if available, otherwise try to get from GitHub
+                let allOutData = outData || [];
+                
+                if (allOutData.length === 0) {
+                    try {
+                        allOutData = await window.githubAPI.loadOutData();
+                    } catch (error) {
+                        console.error('Error loading GitHub OUT data:', error);
+                        // Continue with empty data if both local and GitHub fail
+                    }
+                }
+                
+                const vehicleOutData = allOutData.filter(row => 
                     String(row['VEHICLE NO']).trim().toUpperCase() === vehicleNumber
                 );
                 
