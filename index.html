@@ -12,6 +12,7 @@
     <meta name="format-detection" content="telephone=no">
     <meta name="msapplication-tap-highlight" content="no">
     
+    <!-- External Libraries -->
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Comic+Neue&display=swap" rel="stylesheet">
@@ -401,11 +402,13 @@
     </div>
 
     <div class="container">
+        <!-- Coil Details Section -->
         <div class="section">
             <h2>Coil Details</h2>
             <div id="result" class="coil-details-display"></div>
         </div>
 
+        <!-- Coil Processing Section -->
         <div class="section">
             <h2>Coil Processing</h2>
             <div class="input-container">
@@ -433,6 +436,7 @@
             <div id="addedCoils"></div>
         </div>
 
+        <!-- Generate Reports Section -->
         <div class="section">
             <h2>Generate Reports</h2>
             <div class="input-container">
@@ -446,6 +450,7 @@
             <button id="clearReportVehicleBtn" class="clear-button" onclick="clearReportVehicleInput()" style="display: none;">Clear Report Vehicle</button>
         </div>
 
+        <!-- File Management Section -->
         <div class="section">
             <h2>File Management</h2>
             <input type="file" id="excelFile" accept=".xlsx, .xls" />
@@ -648,101 +653,31 @@
                 this.FILE_PATH = 'coil-data.xlsx';
                 this.EXCEL_URL = `https://raw.githubusercontent.com/${this.GITHUB_OWNER}/${this.GITHUB_REPO}/main/${this.FILE_PATH}`;
                 this.API_BASE = `https://api.github.com/repos/${this.GITHUB_OWNER}/${this.GITHUB_REPO}`;
-                // Old token storage, will be replaced by encrypted method
-                // this.token = localStorage.getItem('githubToken') || ''; 
-                this._encryptedToken = null; // Stores the encrypted token
-                this._encryptionKey = null;  // Stores the key for the current session (not persistent)
-
+                this.token = localStorage.getItem('githubToken') || '';
                 this.rateLimitRemaining = 5000;
                 this.rateLimitResetTime = 0;
-
-                // Attempt to load encrypted token on initialization if it exists
-                const storedEncryptedToken = localStorage.getItem('encryptedGithubToken');
-                if (storedEncryptedToken) {
-                    this._encryptedToken = storedEncryptedToken;
-                    // Note: decryption requires the key, which the user will provide later
-                }
             }
 
-            // Placeholder for simple encryption/decryption (replace with actual crypto in production)
-            _encryptToken(token, key) {
-                // For demonstration: simple XOR cipher. DO NOT USE IN PRODUCTION.
-                // A real application would use Web Crypto API (e.g., AES-GCM).
-                if (!token || !key) return null;
-                let encrypted = '';
-                for (let i = 0; i < token.length; i++) {
-                    encrypted += String.fromCharCode(token.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-                }
-                return btoa(encrypted); // Base64 encode for storage
-            }
-
-            _decryptToken(encryptedToken, key) {
-                // For demonstration: simple XOR cipher. DO NOT USE IN PRODUCTION.
-                if (!encryptedToken || !key) return null;
-                try {
-                    let decoded = atob(encryptedToken); // Base64 decode
-                    let decrypted = '';
-                    for (let i = 0; i < decoded.length; i++) {
-                        decrypted += String.fromCharCode(decoded.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-                    }
-                    return decrypted;
-                } catch (e) {
-                    console.error("Decryption failed:", e);
-                    return null;
-                }
-            }
-
-            setToken(token, encryptionKey) {
-                if (!token || !encryptionKey) {
-                    showMessage('Token and encryption key are required to set GitHub token.', 'error');
-                    return;
-                }
-                this._encryptionKey = encryptionKey; // Store key for session
-                this._encryptedToken = this._encryptToken(token, encryptionKey); // Encrypt and store
-
-                if (this._encryptedToken) {
-                    // Store the encrypted token in localStorage
-                    localStorage.setItem('encryptedGithubToken', this._encryptedToken);
-                    showMessage('GitHub token encrypted and stored successfully!', 'success');
+            setToken(token) {
+                this.token = token;
+                if (token) {
+                    localStorage.setItem('githubToken', token);
                 } else {
-                    showMessage('Failed to encrypt GitHub token.', 'error');
+                    localStorage.removeItem('githubToken');
                 }
             }
 
             getToken() {
-                if (!this._encryptedToken) {
-                    // console.log('No encrypted token found in session or storage.');
-                    return null; // No encrypted token to decrypt
+                if (!this.token) {
+                    this.token = localStorage.getItem('githubToken') || '';
                 }
-                if (!this._encryptionKey) {
-                    // console.log('Encryption key is not set for current session. Cannot decrypt token.');
-                    // This case is handled by calling `setGithubToken()` first.
-                    return null;
-                }
-                const storedEncryptedToken = localStorage.getItem('encryptedGithubToken');
-                if (storedEncryptedToken) {
-                    const decrypted = this._decryptToken(storedEncryptedToken, this._encryptionKey);
-                    if (decrypted) {
-                        return decrypted;
-                    } else {
-                        // showMessage('Failed to decrypt GitHub token. Key might be incorrect or token corrupted.', 'error');
-                        return null;
-                    }
-                }
-                return null;
-            }
-
-            clearToken() {
-                localStorage.removeItem('encryptedGithubToken');
-                this._encryptedToken = null;
-                this._encryptionKey = null;
-                showMessage('GitHub token cleared from storage.', 'info');
+                return this.token;
             }
 
             async makeAuthenticatedRequest(url, options = {}) {
-                const token = this.getToken(); // Use the new getToken that handles decryption
+                const token = this.getToken();
                 if (!token) {
-                    throw new Error('GitHub token is required. Please set your GitHub Personal Access Token (and encryption key).');
+                    throw new Error('GitHub token is required. Please set your GitHub Personal Access Token.');
                 }
 
                 // Check rate limit
@@ -777,7 +712,7 @@
                         }
                         
                         if (response.status === 401) {
-                            errorMessage = 'Invalid GitHub token. Please check your Personal Access Token and encryption key.';
+                            errorMessage = 'Invalid GitHub token. Please check your Personal Access Token.';
                         } else if (response.status === 403) {
                             errorMessage = 'GitHub API rate limit exceeded or insufficient permissions.';
                         } else if (response.status === 404) {
@@ -808,7 +743,7 @@
                         return new Uint8Array(arrayBuffer);
                     }
 
-                    // Fall back to authenticated API (requires token and key)
+                    // Fall back to authenticated API
                     const response = await this.makeAuthenticatedRequest(`${this.API_BASE}/contents/${this.FILE_PATH}`);
                     const data = await response.json();
                     
@@ -835,7 +770,7 @@
                     
                     const token = this.getToken();
                     if (!token) {
-                        throw new Error('GitHub token is required to update files. Please set your GitHub Personal Access Token (and encryption key).');
+                        throw new Error('GitHub token is required to update files. Please set your GitHub Personal Access Token.');
                     }
 
                     // Get current file info
@@ -1771,25 +1706,9 @@
                 const base64String = btoa(String.fromCharCode(...uint8Array));
                 
                 // Upload to GitHub
-                // Note: The original uploadExcel function refers to githubAPI.uploadExcelFile(base64String, file.name)
-                // However, the provided GitHubAPI class does not have an `uploadExcelFile` method that takes `base64String` directly.
-                // It has `updateExcelFile` that takes a `workbook` object.
-                // Assuming `updateExcelFile` should be used here, and it requires a workbook object.
-                // If you intend a different upload mechanism for new files, please clarify.
+                const result = await window.githubAPI.uploadExcelFile(base64String, file.name);
                 
-                // For now, I'll keep the existing logic that assumes `updateExcelFile` handles it
-                // by first fetching the current file. This means this `uploadExcel` is more of an "update existing"
-                // rather than "upload brand new".
-                
-                // To truly "upload" a new excel, the `updateExcelFile` in GitHubAPI would need to handle
-                // cases where the file doesn't exist, and the `uploadExcel` here would need to create a workbook from `file`.
-                
-                // Re-reading file as workbook for updateExcelFile
-                const workbook = XLSX.read(uint8Array, { type: 'array' });
-                
-                const result = await window.githubAPI.updateExcelFile(workbook, `Upload Excel: ${file.name}`);
-                
-                if (result) { // Check if result is not null/undefined from successful update
+                if (result.success) {
                     showMessage(`Excel file "${file.name}" uploaded to GitHub successfully`, 'success');
                     
                     // Clear the file input
@@ -1797,9 +1716,9 @@
                     document.getElementById('fileName').textContent = '';
                     
                     // Optionally refresh the coil data from the uploaded file
-                    await autoLoadFromGithub(); // Reload all data from GitHub
+                    await loadCoilDataFromFile();
                 } else {
-                    showMessage(`Error uploading Excel file: Operation failed or incomplete.`, 'error');
+                    showMessage(`Error uploading Excel file: ${result.error}`, 'error');
                 }
                 
             } catch (error) {
@@ -1816,9 +1735,8 @@
         }
 
         function clearLocalStorage() {
-            if (confirm('Are you sure you want to clear all local storage data? This includes your encrypted GitHub token.')) {
+            if (confirm('Are you sure you want to clear all local storage data?')) {
                 localStorage.clear();
-                window.githubAPI.clearToken(); // Also clear token from in-memory object
                 showMessage('Local storage cleared', 'success');
             }
         }
@@ -1830,20 +1748,11 @@
             }
         }
 
-        // Modified setGithubToken to match index2.html's two-prompt logic
         function setGithubToken() {
-            const password = prompt('Enter your encryption password/key:'); // First prompt
-            if (!password) {
-                showMessage('Encryption password/key not provided. Operation cancelled.', 'info');
-                return;
-            }
-
-            const token = prompt('Enter your GitHub Personal Access Token:'); // Second prompt
+            const token = prompt('Enter your GitHub Personal Access Token:');
             if (token) {
-                window.githubAPI.setToken(token, password);
-                // The showMessage is now handled within window.githubAPI.setToken
-            } else {
-                showMessage('GitHub token not provided. Operation cancelled.', 'info');
+                window.githubAPI.setToken(token);
+                showMessage('GitHub token set successfully', 'success');
             }
         }
 
@@ -1874,22 +1783,7 @@
             if (window.permissionManager) {
                 window.permissionManager.showMessage(text, type);
             } else {
-                // Fallback for browser if permissionManager isn't fully initialized or in dev mode
-                const messageDiv = document.createElement('div');
-                messageDiv.className = `message ${type}`;
-                messageDiv.textContent = text;
-                
-                const container = document.querySelector('.container');
-                if (container) {
-                    container.insertBefore(messageDiv, container.firstChild);
-                    setTimeout(() => {
-                        if (messageDiv.parentNode) {
-                            messageDiv.parentNode.removeChild(messageDiv);
-                        }
-                    }, 3000);
-                } else {
-                    console.log(`[${type.toUpperCase()}] ${text}`);
-                }
+                console.log(`[${type.toUpperCase()}] ${text}`);
             }
         }
 
