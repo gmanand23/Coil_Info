@@ -1,0 +1,2656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Coil Data Checker</title>
+    <meta http-equiv="Cache-Control" content="no-store">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: gap: blob: https:; connect-src 'self' https: wss: ws:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; font-src 'self' https: data:; img-src 'self' data: https: blob:; media-src 'self' https: blob:;">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="msapplication-tap-highlight" content="no">
+    
+    <!-- External Libraries -->
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Comic Neue', cursive, sans-serif;
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px 8px;
+            overflow-x: hidden;
+        }
+
+        .header-title {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .header-title h1 {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00ff66;
+            text-shadow: 1px 1px 3px #000;
+            margin: 0;
+            line-height: 1.3;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 16px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.05);
+            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .button-row {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .half-width {
+            flex: 1;
+            margin: 0 !important;
+        }
+
+        .third-width {
+            flex: 1;
+            margin: 0 !important;
+        }
+
+        .coil-details-display {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            min-height: 60px;
+            margin-top: 10px;
+        }
+
+        /* Mobile-optimized input styling */
+        input, button {
+            width: 100%;
+            padding: 14px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            touch-action: manipulation;
+        }
+
+        input[type="text"], input[type="file"] {
+            background: #ecf0f1;
+            color: #2c3e50;
+            font-family: 'Comic Neue', cursive, sans-serif;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #00ff66;
+        }
+
+        button {
+            background-color: #1abc9c;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: 'Comic Neue', cursive, sans-serif;
+            transition: all 0.2s ease;
+        }
+
+        button:active {
+            transform: scale(0.98);
+            background-color: #16a085;
+        }
+
+        button.clear-button {
+            background-color: #e74c3c;
+        }
+
+        button.clear-button:active {
+            background-color: #c0392b;
+        }
+
+        button:disabled {
+            background-color: #7f8c8d;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        /* Section headers */
+        h2 {
+            font-size: 18px;
+            margin: 0 0 15px 0;
+            text-align: left;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        /* Suggestion dropdowns */
+        #suggestions, #vehicleSuggestions, #reportVehicleSuggestions {
+            background: white;
+            color: #2c3e50;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            position: absolute;
+            width: calc(100% - 30px);
+            z-index: 10;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border: 1px solid #ddd;
+        }
+
+        #suggestions div, #vehicleSuggestions div, #reportVehicleSuggestions div {
+            padding: 14px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            font-size: 16px;
+            font-family: 'Comic Neue', cursive, sans-serif;
+        }
+
+        #suggestions div:hover, #vehicleSuggestions div:hover, #reportVehicleSuggestions div:hover {
+            background-color: #f8f9fa;
+        }
+
+        #suggestions div:last-child, #vehicleSuggestions div:last-child, #reportVehicleSuggestions div:last-child {
+            border-bottom: none;
+        }
+
+        #result table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        #result table td {
+            padding: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            word-wrap: break-word;
+            vertical-align: top;
+        }
+
+        #result table tr:nth-child(even) {
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        /* QR Code Scanner */
+        #reader {
+            width: 100%;
+            margin-top: 15px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.3);
+            min-height: 50px;
+        }
+
+        .input-container {
+            position: relative;
+        }
+
+        /* File name display */
+        #fileName {
+            color: #ecf0f1;
+            font-size: 14px;
+            margin: 5px 0;
+            text-align: center;
+            word-wrap: break-word;
+        }
+
+        /* Added coils display */
+        #addedCoils {
+            margin-top: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            min-height: 20px;
+        }
+
+        #addedCoils h3 {
+            margin: 0 0 10px 0;
+            color: #00ff66;
+            font-size: 16px;
+        }
+
+        /* Touch-friendly file input */
+        input[type="file"] {
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px dashed #3498db;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 20px;
+        }
+
+        input[type="file"]::-webkit-file-upload-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        /* Mobile responsive adjustments */
+        @media (max-width: 480px) {
+            body {
+                padding: 10px 5px;
+            }
+            
+            .header-title h1 {
+                font-size: 20px;
+            }
+            
+            .container {
+                padding: 12px;
+            }
+            
+            input, button {
+                font-size: 16px;
+                padding: 12px;
+            }
+            
+            h2 {
+                font-size: 16px;
+            }
+            
+            #suggestions, #vehicleSuggestions, #reportVehicleSuggestions {
+                font-size: 14px;
+            }
+            
+            #suggestions div, #vehicleSuggestions div, #reportVehicleSuggestions div {
+                padding: 12px;
+            }
+        }
+
+        /* Very small screens */
+        @media (max-width: 320px) {
+            .header-title h1 {
+                font-size: 18px;
+            }
+            
+            input, button {
+                font-size: 14px;
+                padding: 10px;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+        }
+
+        /* Prevent zoom on iOS */
+        @media screen and (-webkit-min-device-pixel-ratio: 0) {
+            input, textarea, select {
+                font-size: 16px !important;
+            }
+        }
+
+        /* Permission request overlay */
+        .permission-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .permission-dialog {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            color: #2c3e50;
+            max-width: 300px;
+            margin: 20px;
+        }
+
+        .permission-dialog h3 {
+            margin-top: 0;
+            color: #e74c3c;
+        }
+
+        .permission-dialog button {
+            margin: 5px;
+            padding: 10px 20px;
+            width: auto;
+        }
+
+        /* Loading indicator */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Success/Error messages */
+        .message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        /* APK Report Modal - Added for APK compatibility */
+        .report-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            display: none;
+            flex-direction: column;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .report-modal.show {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
+        .report-modal-header {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .report-modal-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .report-modal-share, .report-modal-print, .report-modal-pdf, .report-modal-close {
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: auto;
+            margin: 0;
+            font-size: 14px;
+            font-family: 'Comic Neue', cursive, sans-serif;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+
+        .report-modal-share {
+            background: #3498db;
+            color: white;
+        }
+
+        .report-modal-share:active {
+            background: #2980b9;
+        }
+
+        .report-modal-print {
+            background: #9b59b6;
+            color: white;
+        }
+
+        .report-modal-print:active {
+            background: #8e44ad;
+        }
+
+        .report-modal-pdf {
+            background: #f39c12;
+            color: white;
+        }
+
+        .report-modal-pdf:active {
+            background: #e67e22;
+        }
+
+        .report-modal-close {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .report-modal-close:active {
+            background: #c0392b;
+        }
+
+        .report-modal-content {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background: white;
+            color: #2c3e50;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.4;
+            max-height: 80vh;
+            overflow-x: auto;
+        }
+        
+        .report-modal-content.text-content {
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        
+        .report-modal-content table {
+            width: 100%;
+            min-width: 800px;
+            table-layout: auto;
+        }
+
+        /* Print styles */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            
+            .report-modal-content,
+            .report-modal-content * {
+                visibility: visible;
+            }
+            
+            .report-modal {
+                position: static !important;
+                background: white !important;
+                display: block !important;
+            }
+            
+            .report-modal-header {
+                display: none !important;
+            }
+            
+            .report-modal-content {
+                position: static !important;
+                max-height: none !important;
+                overflow: visible !important;
+                background: white !important;
+                color: black !important;
+                padding: 0 !important;
+                font-size: 12px !important;
+                line-height: 1.4 !important;
+            }
+            
+            .report-modal-content table {
+                min-width: auto !important;
+                width: 100% !important;
+                page-break-inside: avoid;
+            }
+            
+            .report-modal-content table th,
+            .report-modal-content table td {
+                border: 1px solid #000 !important;
+                padding: 4px !important;
+                font-size: 10px !important;
+            }
+        }
+
+        /* Mobile responsive adjustments for report buttons */
+        @media (max-width: 480px) {
+            .report-modal-buttons {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            
+            .report-modal-share, .report-modal-print, .report-modal-pdf, .report-modal-close {
+                font-size: 12px;
+                padding: 6px 10px;
+            }
+        }
+    </style>
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+</head>
+<body>
+    <div class="header-title">
+        <h1>A.S.Shipping Agencies Pvt Ltd,<br>(Greenways Group) - V: 4.1</h1>
+    </div>
+
+    <div class="container">
+        <!-- Coil Details Section -->
+        <div class="section">
+            <h2>Coil Details</h2>
+            <div id="result" class="coil-details-display"></div>
+        </div>
+
+        <!-- Coil Processing Section -->
+        <div class="section">
+            <h2>Coil Processing</h2>
+            <div class="input-container">
+                <input type="text" id="coilInput" placeholder="Enter Coil Number" oninput="showSuggestions(); toggleClearButton();" autocomplete="off" />
+                <div id="suggestions"></div>
+            </div>
+            <div class="input-container">
+                <input type="text" id="vehicleInput" placeholder="Enter Vehicle Number" oninput="showVehicleSuggestions(); toggleVehicleClearButton();" autocomplete="off" />
+                <div id="vehicleSuggestions"></div>
+            </div>
+            
+            <div class="button-row">
+                <button class="third-width" onclick="startScanner()">Scan QR</button>
+                <button class="third-width" id="addBtn" onclick="addCoilToVehicle()">Add Coil</button>
+                <button class="third-width clear-button" onclick="clearInputs()">Clear</button>
+            </div>
+            
+            <div class="button-row">
+                <button class="third-width" id="saveBtn" onclick="saveVehicleCoils()">Save</button>
+                <button class="third-width" id="generateBtn" onclick="generateTextFile()" disabled>Generate Text</button>
+                <button class="third-width clear-button" id="clearVehicleBtn" onclick="clearVehicleInput()" style="display: none;">Clear Vehicle</button>
+            </div>
+            
+            <div id="reader" ondblclick="closeScanner()"></div>
+            <div id="addedCoils"></div>
+        </div>
+
+        <!-- Generate Reports Section -->
+        <div class="section">
+            <h2>Generate Reports</h2>
+            <div class="input-container">
+                <input type="text" id="reportVehicleInput" placeholder="Enter Vehicle Number for Report" oninput="showReportVehicleSuggestions(); toggleReportVehicleClearButton();" autocomplete="off" />
+                <div id="reportVehicleSuggestions"></div>
+            </div>
+            <div class="button-row">
+                <button type="button" class="half-width" onclick="generateAllOutDataReport(event); return false;">All OUT Data Report</button>
+                <button type="button" class="half-width" onclick="event.preventDefault(); generateVehicleOutReport(); return false;">Generate Vehicle Report</button>
+            </div>
+
+            <button id="clearReportVehicleBtn" class="clear-button" onclick="clearReportVehicleInput()" style="display: none;">Clear Report Vehicle</button>
+        </div>
+
+        <!-- File Management Section -->
+        <div class="section">
+            <h2>File Management</h2>
+            <input type="file" id="excelFile" accept=".xlsx, .xls" />
+            <p id="fileName"></p>
+            <div class="button-row">
+                <button class="third-width" onclick="uploadExcel()">Upload Excel</button>
+                <button class="third-width clear-button" onclick="clearLocalStorage()">Clear Storage</button>
+                <button class="third-width clear-button" onclick="resetApp()">Clear All</button>
+            </div>
+            <div class="button-row">
+                <button class="half-width" onclick="updateAppFromGithub()" style="background-color: #3498db;">Update App</button>
+                <button class="half-width" onclick="setGithubToken()" style="background-color: #27ae60;" id="githubTokenBtn">Set GitHub Token</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- APK Report Modal - Added for APK compatibility -->
+    <div class="report-modal" id="reportModal">
+        <div class="report-modal-header">
+            <h3 id="reportModalTitle">Report Viewer</h3>
+            <div class="report-modal-buttons">
+                <button class="report-modal-share" onclick="shareReport()">Share</button>
+                <button class="report-modal-print" onclick="printReport()">Print</button>
+                <button class="report-modal-pdf" onclick="downloadReportAsPDF()">PDF</button>
+                <button class="report-modal-close" onclick="closeReportModal()">Close</button>
+            </div>
+        </div>
+        <div class="report-modal-content" id="reportModalContent">
+            <!-- Report content will be displayed here -->
+        </div>
+    </div>
+
+    <script>
+        // Permission handling for Cordova app
+        class PermissionManager {
+            constructor() {
+                this.requiredPermissions = [
+                    'android.permission.CAMERA',
+                    'android.permission.WRITE_EXTERNAL_STORAGE',
+                    'android.permission.READ_EXTERNAL_STORAGE'
+                ];
+                this.permissionStatus = {};
+            }
+
+            async initialize() {
+                if (typeof cordova === 'undefined') {
+                    console.log('Cordova not available - running in browser mode');
+                    return true;
+                }
+
+                try {
+                    await this.checkAllPermissions();
+                    return true;
+                } catch (error) {
+                    console.error('Permission initialization failed:', error);
+                    return false;
+                }
+            }
+
+            async checkAllPermissions() {
+                if (!window.cordova || !cordova.plugins.permissions) {
+                    console.log('Permissions plugin not available');
+                    return;
+                }
+
+                for (const permission of this.requiredPermissions) {
+                    try {
+                        const result = await this.checkPermission(permission);
+                        this.permissionStatus[permission] = result;
+                        console.log(`Permission ${permission}: ${result ? 'granted' : 'denied'}`);
+                    } catch (error) {
+                        console.error(`Error checking permission ${permission}:`, error);
+                        this.permissionStatus[permission] = false;
+                    }
+                }
+            }
+
+            checkPermission(permission) {
+                return new Promise((resolve) => {
+                    if (!window.cordova || !cordova.plugins.permissions) {
+                        resolve(true); // Assume granted if plugin not available
+                        return;
+                    }
+
+                    cordova.plugins.permissions.checkPermission(permission, (result) => {
+                        resolve(result.hasPermission);
+                    }, (error) => {
+                        console.error('Permission check error:', error);
+                        resolve(false);
+                    });
+                });
+            }
+
+            requestPermission(permission) {
+                return new Promise((resolve) => {
+                    if (!window.cordova || !cordova.plugins.permissions) {
+                        resolve(true);
+                        return;
+                    }
+
+                    cordova.plugins.permissions.requestPermission(permission, (result) => {
+                        const granted = result.hasPermission;
+                        this.permissionStatus[permission] = granted;
+                        resolve(granted);
+                    }, (error) => {
+                        console.error('Permission request error:', error);
+                        resolve(false);
+                    });
+                });
+            }
+
+            async requestCameraPermission() {
+                const permission = 'android.permission.CAMERA';
+                
+                if (this.permissionStatus[permission]) {
+                    return true;
+                }
+
+                try {
+                    const granted = await this.requestPermission(permission);
+                    if (granted) {
+                        this.showMessage('Camera permission granted', 'success');
+                        return true;
+                    } else {
+                        this.showPermissionDialog('Camera', 'This app needs camera access to scan QR codes.');
+                        return false;
+                    }
+                } catch (error) {
+                    console.error('Camera permission request failed:', error);
+                    this.showMessage('Camera permission request failed', 'error');
+                    return false;
+                }
+            }
+
+            async requestStoragePermission() {
+                const permissions = [
+                    'android.permission.WRITE_EXTERNAL_STORAGE',
+                    'android.permission.READ_EXTERNAL_STORAGE'
+                ];
+
+                let allGranted = true;
+                for (const permission of permissions) {
+                    if (!this.permissionStatus[permission]) {
+                        try {
+                            const granted = await this.requestPermission(permission);
+                            if (!granted) {
+                                allGranted = false;
+                                break;
+                            }
+                        } catch (error) {
+                            console.error(`Storage permission request failed for ${permission}:`, error);
+                            allGranted = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (allGranted) {
+                    this.showMessage('Storage permission granted', 'success');
+                    return true;
+                } else {
+                    this.showPermissionDialog('Storage', 'This app needs storage access to save Excel files.');
+                    return false;
+                }
+            }
+
+            showPermissionDialog(permissionType, message) {
+                const overlay = document.createElement('div');
+                overlay.className = 'permission-overlay';
+                overlay.innerHTML = `
+                    <div class="permission-dialog">
+                        <h3>${permissionType} Permission Required</h3>
+                        <p>${message}</p>
+                        <button onclick="this.parentElement.parentElement.remove()">Close</button>
+                        <button onclick="this.parentElement.parentElement.remove(); window.location.reload();">Retry</button>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+            }
+
+            showMessage(text, type = 'info') {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${type}`;
+                messageDiv.textContent = text;
+                
+                const container = document.querySelector('.container');
+                if (container) {
+                    container.insertBefore(messageDiv, container.firstChild);
+                    setTimeout(() => {
+                        if (messageDiv.parentNode) {
+                            messageDiv.parentNode.removeChild(messageDiv);
+                        }
+                    }, 3000);
+                }
+            }
+
+            isPermissionGranted(permission) {
+                return this.permissionStatus[permission] === true;
+            }
+
+            areStoragePermissionsGranted() {
+                return this.isPermissionGranted('android.permission.WRITE_EXTERNAL_STORAGE') &&
+                       this.isPermissionGranted('android.permission.READ_EXTERNAL_STORAGE');
+            }
+
+            isCameraPermissionGranted() {
+                return this.isPermissionGranted('android.permission.CAMERA');
+            }
+        }
+
+        // Enhanced GitHub API integration with improved error handling
+        class GitHubAPI {
+            constructor() {
+                this.GITHUB_OWNER = 'gmanand23';
+                this.GITHUB_REPO = 'Coil_Info';
+                this.FILE_PATH = 'coil-data.xlsx';
+                this.EXCEL_URL = `https://raw.githubusercontent.com/${this.GITHUB_OWNER}/${this.GITHUB_REPO}/main/${this.FILE_PATH}`;
+                this.API_BASE = `https://api.github.com/repos/${this.GITHUB_OWNER}/${this.GITHUB_REPO}`;
+                this.token = localStorage.getItem('githubToken') || '';
+                this.rateLimitRemaining = 5000;
+                this.rateLimitResetTime = 0;
+            }
+
+            setToken(token) {
+                this.token = token;
+                if (token) {
+                    localStorage.setItem('githubToken', token);
+                } else {
+                    localStorage.removeItem('githubToken');
+                }
+            }
+
+            getToken() {
+                if (!this.token) {
+                    this.token = localStorage.getItem('githubToken') || '';
+                }
+                return this.token;
+            }
+
+            async makeAuthenticatedRequest(url, options = {}) {
+                const token = this.getToken();
+                if (!token) {
+                    throw new Error('GitHub token is required. Please set your GitHub Personal Access Token.');
+                }
+
+                // Check rate limit
+                if (this.rateLimitRemaining <= 0 && Date.now() < this.rateLimitResetTime) {
+                    const waitTime = Math.ceil((this.rateLimitResetTime - Date.now()) / 1000);
+                    throw new Error(`Rate limit exceeded. Please wait ${waitTime} seconds before trying again.`);
+                }
+
+                const headers = {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'User-Agent': 'CoilDataApp/4.1',
+                    ...options.headers
+                };
+
+                try {
+                    const response = await fetch(url, {
+                        ...options,
+                        headers
+                    });
+
+                    // Update rate limit info
+                    this.rateLimitRemaining = parseInt(response.headers.get('X-RateLimit-Remaining') || '5000');
+                    this.rateLimitResetTime = parseInt(response.headers.get('X-RateLimit-Reset') || '0') * 1000;
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        let errorMessage = `GitHub API Error: ${response.status} ${response.statusText}`;
+                        
+                        if (errorData.message) {
+                            errorMessage += ` - ${errorData.message}`;
+                        }
+                        
+                        if (response.status === 401) {
+                            errorMessage = 'Invalid GitHub token. Please check your Personal Access Token.';
+                        } else if (response.status === 403) {
+                            errorMessage = 'GitHub API rate limit exceeded or insufficient permissions.';
+                        } else if (response.status === 404) {
+                            errorMessage = 'Repository or file not found. Please check the repository settings.';
+                        }
+
+                        throw new Error(errorMessage);
+                    }
+
+                    return response;
+                } catch (error) {
+                    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                        throw new Error('Network error. Please check your internet connection.');
+                    }
+                    throw error;
+                }
+            }
+
+            async fetchExcelFile() {
+                try {
+                    console.log('Fetching Excel file from GitHub...');
+                    
+                    // Try public URL first (no authentication required)
+                    const publicResponse = await fetch(`${this.EXCEL_URL}?t=${Date.now()}`);
+                    if (publicResponse.ok) {
+                        const arrayBuffer = await publicResponse.arrayBuffer();
+                        console.log('Successfully fetched Excel file from public URL');
+                        return arrayBuffer;
+                    }
+
+                    console.log('Public URL failed, trying authenticated request...');
+                    
+                    // If public fails, try authenticated request
+                    const response = await this.makeAuthenticatedRequest(`${this.API_BASE}/contents/${this.FILE_PATH}`);
+                    const data = await response.json();
+                    
+                    if (data.content) {
+                        const content = data.content.replace(/\s/g, '');
+                        const binaryString = atob(content);
+                        const arrayBuffer = new ArrayBuffer(binaryString.length);
+                        const uint8Array = new Uint8Array(arrayBuffer);
+                        
+                        for (let i = 0; i < binaryString.length; i++) {
+                            uint8Array[i] = binaryString.charCodeAt(i);
+                        }
+                        
+                        console.log('Successfully fetched Excel file via API');
+                        return arrayBuffer;
+                    } else {
+                        throw new Error('No content in GitHub response');
+                    }
+                } catch (error) {
+                    console.error('Error fetching Excel file:', error);
+                    throw error;
+                }
+            }
+
+            async updateExcelFile(workbook, commitMessage = 'Update coil data') {
+                try {
+                    console.log('=== Starting Excel file update ===');
+                    if (!this.getToken()) {
+                        throw new Error('GitHub token required for file updates');
+                    }
+
+                    console.log('Getting current file info...');
+                    // Get current file info
+                    const fileResponse = await this.makeAuthenticatedRequest(`${this.API_BASE}/contents/${this.FILE_PATH}`);
+                    const fileData = await fileResponse.json();
+                    console.log('Current file SHA:', fileData.sha);
+
+                    console.log('Converting workbook to binary...');
+                    // Convert workbook to binary
+                    const updatedContent = XLSX.write(workbook, { type: 'binary', bookType: 'xlsx' });
+                    const updatedBase64 = btoa(updatedContent);
+                    console.log('File size after conversion:', updatedBase64.length, 'characters');
+
+                    console.log('Updating file on GitHub...');
+                    // Update file
+                    const updateResponse = await this.makeAuthenticatedRequest(
+                        `${this.API_BASE}/contents/${this.FILE_PATH}`,
+                        {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                message: commitMessage,
+                                content: updatedBase64,
+                                sha: fileData.sha
+                            })
+                        }
+                    );
+
+                    const result = await updateResponse.json();
+                    console.log('=== Successfully updated Excel file on GitHub ===');
+                    console.log('New SHA:', result.content?.sha);
+                    return result;
+
+                } catch (error) {
+                    console.error('=== Error updating Excel file ===', error);
+                    throw error;
+                }
+            }
+
+            async storeOutData(outEntries) {
+                try {
+                    console.log('=== Starting OUT data storage to GitHub ===');
+                    console.log('Token available:', !!this.getToken());
+                    console.log('Entries to store:', outEntries.length);
+                    console.log('Sample entry:', outEntries[0]);
+                    
+                    if (!outEntries || outEntries.length === 0) {
+                        throw new Error('No data to store');
+                    }
+
+                    if (!this.getToken()) {
+                        throw new Error('GitHub token not set. Please set your GitHub token first.');
+                    }
+
+                    console.log('Fetching current Excel file...');
+                    // Fetch current Excel file
+                    const excelData = await this.fetchExcelFile();
+                    const workbook = XLSX.read(excelData, { type: 'array' });
+                    console.log('Available sheets:', workbook.SheetNames);
+
+                    // Get or create OUT sheet
+                    let outSheet;
+                    if (workbook.SheetNames.includes('OUT')) {
+                        outSheet = workbook.Sheets['OUT'];
+                        console.log('Found existing OUT sheet');
+                    } else {
+                        outSheet = XLSX.utils.json_to_sheet([]);
+                        workbook.SheetNames.push('OUT');
+                        workbook.Sheets['OUT'] = outSheet;
+                        console.log('Created new OUT sheet');
+                    }
+
+                    // Convert existing data to JSON
+                    const existingData = XLSX.utils.sheet_to_json(outSheet);
+                    console.log(`Existing OUT data: ${existingData.length} records`);
+                    console.log('Last 3 existing records:', existingData.slice(-3));
+
+                    // Add new entries
+                    const updatedData = [...existingData, ...outEntries];
+                    console.log(`Total data after update: ${updatedData.length} records`);
+                    console.log('New entries being added:', outEntries);
+
+                    // Update sheet
+                    const newOutSheet = XLSX.utils.json_to_sheet(updatedData);
+                    workbook.Sheets['OUT'] = newOutSheet;
+
+                    // Upload to GitHub
+                    const commitMessage = `Update OUT data: ${outEntries.length} new entries added on ${new Date().toISOString()}`;
+                    console.log('Uploading to GitHub with message:', commitMessage);
+                    await this.updateExcelFile(workbook, commitMessage);
+
+                    console.log('=== Successfully stored OUT data to GitHub ===');
+                    return true;
+
+                } catch (error) {
+                    console.error('=== Error storing OUT data ===', error);
+                    throw error;
+                }
+            }
+
+            async loadOutData() {
+                try {
+                    console.log('Loading OUT data from GitHub...');
+                    
+                    const excelData = await this.fetchExcelFile();
+                    const workbook = XLSX.read(excelData, { type: 'array' });
+
+                    if (workbook.SheetNames.includes('OUT')) {
+                        const outSheet = workbook.Sheets['OUT'];
+                        const outData = XLSX.utils.sheet_to_json(outSheet);
+                        console.log(`Loaded ${outData.length} OUT records from GitHub`);
+                        return outData;
+                    } else {
+                        console.log('No OUT sheet found in GitHub Excel file');
+                        return [];
+                    }
+
+                } catch (error) {
+                    console.error('Error loading OUT data:', error);
+                    throw error;
+                }
+            }
+
+            async testConnection() {
+                try {
+                    const response = await this.makeAuthenticatedRequest(`${this.API_BASE}`);
+                    const data = await response.json();
+                    console.log('GitHub connection test successful:', data.full_name);
+                    return true;
+                } catch (error) {
+                    console.error('GitHub connection test failed:', error);
+                    throw error;
+                }
+            }
+
+            getRateLimitInfo() {
+                return {
+                    remaining: this.rateLimitRemaining,
+                    resetTime: new Date(this.rateLimitResetTime).toISOString()
+                };
+            }
+        }
+
+        // Enhanced Coil Data Management Application
+        let coilData = [];
+        let vehicleData = [];
+        let outData = [];
+        let loadedFileName = '';
+        let vesselName = 'coil-data'; // Default vessel name
+        let addedCoils = [];
+        let vehicleCoilMap = {};
+        let html5QrCode;
+        let serialCounter = 1;
+        
+        // Function to extract vessel name from filename
+        function extractVesselName(filename) {
+            if (!filename) return 'coil-data';
+            
+            // Remove file extension
+            const nameWithoutExt = filename.replace(/\.(xlsx|xls)$/i, '');
+            
+            // Return the filename without extension as vessel name
+            return nameWithoutExt || 'coil-data';
+        }
+        
+        // Function to update vessel name when file changes
+        function updateVesselName(filename) {
+            vesselName = extractVesselName(filename);
+            console.log('Vessel name updated to:', vesselName);
+        }
+
+        // Global instances
+        window.permissionManager = new PermissionManager();
+        window.githubAPI = new GitHubAPI();
+
+        // Initialize app when device is ready
+        document.addEventListener('deviceready', onDeviceReady, false);
+
+        // Fallback for browser testing
+        if (typeof cordova === 'undefined') {
+            document.addEventListener('DOMContentLoaded', onDeviceReady);
+        }
+
+        async function onDeviceReady() {
+            console.log('Device ready - initializing app');
+            
+            try {
+                // Initialize permissions
+                if (window.permissionManager) {
+                    await window.permissionManager.initialize();
+                }
+                
+                // Load initial data
+                await autoLoadFromGithub();
+                
+                // Load OUT data for serial counter
+                await loadOutDataForSerial();
+                
+                // Set up file input handler
+                const fileInput = document.getElementById('excelFile');
+                if (fileInput) {
+                    fileInput.addEventListener('change', handleFileSelect);
+                }
+                
+                // Update GitHub token button status
+                updateGithubTokenButtonStatus();
+                
+                console.log('App initialization complete');
+                
+            } catch (error) {
+                console.error('App initialization failed:', error);
+                showMessage('App initialization failed: ' + error.message, 'error');
+            }
+        }
+
+        // Auto-load Excel data from GitHub on startup
+        async function autoLoadFromGithub() {
+            try {
+                console.log('Auto-loading data from GitHub...');
+                showMessage('Loading data from GitHub...', 'info');
+                
+                const excelData = await window.githubAPI.fetchExcelFile();
+                const workbook = XLSX.read(excelData, { type: 'array' });
+                
+                console.log('Available sheets:', workbook.SheetNames);
+                
+                // Load PNR sheet (coil data)
+                if (workbook.SheetNames.includes('PNR')) {
+                    const pnrSheet = workbook.Sheets['PNR'];
+                    coilData = XLSX.utils.sheet_to_json(pnrSheet);
+                    console.log('Loaded PNR data:', coilData.length, 'records');
+                }
+                
+                // Load VEH sheet (vehicle data)
+                if (workbook.SheetNames.includes('VEH')) {
+                    const vehicleSheet = workbook.Sheets['VEH'];
+                    vehicleData = XLSX.utils.sheet_to_json(vehicleSheet);
+                    console.log('Loaded VEH data:', vehicleData.length, 'records');
+                }
+                
+                loadedFileName = 'GitHub: coil-data.xlsx';
+                updateVesselName('coil-data.xlsx'); // Update vessel name from GitHub file
+                const fileNameElement = document.getElementById('fileName');
+                if (fileNameElement) {
+                    fileNameElement.textContent = `Auto-loaded: ${loadedFileName}`;
+                }
+                
+                showMessage('Data loaded successfully from GitHub', 'success');
+                
+            } catch (error) {
+                console.error('Auto-load failed:', error);
+                const fileNameElement = document.getElementById('fileName');
+                if (fileNameElement) {
+                    fileNameElement.textContent = 'Auto-load failed. Please upload Excel file manually.';
+                }
+                showMessage('Failed to load data from GitHub: ' + error.message, 'error');
+            }
+        }
+
+        async function loadOutDataForSerial() {
+            try {
+                const githubOutData = await window.githubAPI.loadOutData();
+                
+                if (githubOutData.length > 0) {
+                    const maxSerial = Math.max(...githubOutData.map(row => parseInt(row['SERIAL NO']) || 0));
+                    serialCounter = maxSerial + 1;
+                    console.log('Serial counter set from GitHub data:', serialCounter);
+                }
+                
+            } catch (error) {
+                console.log('Could not load OUT data for serial counter:', error);
+            }
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    console.log('Manual file load - Available sheets:', workbook.SheetNames);
+                    
+                    // Load PNR sheet (coil data)
+                    if (workbook.SheetNames.includes('PNR')) {
+                        const pnrSheet = workbook.Sheets['PNR'];
+                        coilData = XLSX.utils.sheet_to_json(pnrSheet);
+                        console.log('Loaded PNR data:', coilData.length, 'records');
+                    }
+                    
+                    // Load VEH sheet
+                    if (workbook.SheetNames.includes('VEH')) {
+                        const vehicleSheet = workbook.Sheets['VEH'];
+                        vehicleData = XLSX.utils.sheet_to_json(vehicleSheet);
+                        console.log('Loaded VEH data:', vehicleData.length, 'records');
+                    }
+                    
+                    // Load OUT sheet for existing data and serial counter
+                    if (workbook.SheetNames.includes('OUT')) {
+                        const outSheet = workbook.Sheets['OUT'];
+                        outData = XLSX.utils.sheet_to_json(outSheet);
+                        
+                        if (outData.length > 0) {
+                            const maxSerial = Math.max(...outData.map(row => parseInt(row['SERIAL NO']) || 0));
+                            serialCounter = maxSerial + 1;
+                        }
+                    }
+                    
+                    loadedFileName = file.name;
+                    updateVesselName(file.name); // Update vessel name from uploaded file
+                    document.getElementById('fileName').textContent = `Loaded: ${loadedFileName}`;
+                    showMessage('Excel file loaded successfully!', 'success');
+                    
+                } catch (error) {
+                    console.error('Error reading Excel file:', error);
+                    showMessage('Error reading Excel file: ' + error.message, 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function searchCoil() {
+            const coilNumber = document.getElementById('coilInput').value.trim().toUpperCase();
+            const resultDiv = document.getElementById('result');
+            
+            if (!coilNumber) {
+                resultDiv.innerHTML = '';
+                return;
+            }
+            
+            if (coilData.length === 0) {
+                resultDiv.innerHTML = '<p style="color: #ff6b6b;">No Excel data loaded. Please upload an Excel file first.</p>';
+                return;
+            }
+            
+            const matchKey = Object.keys(coilData[0] || {}).find(key => 
+                key.trim().toUpperCase() === 'MILL COIL NO' || 
+                key.trim().toUpperCase() === 'COIL NO' ||
+                key.trim().toUpperCase().includes('MILL COIL')
+            );
+            
+            if (!matchKey) {
+                resultDiv.innerHTML = '<p style="color: #ff6b6b;">Could not find MILL COIL NO column in Excel data.</p>';
+                return;
+            }
+            
+            const coil = coilData.find(row => 
+                String(row[matchKey]).trim().toUpperCase() === coilNumber
+            );
+            
+            if (coil) {
+                let html = '<table>';
+                Object.entries(coil).forEach(([key, value]) => {
+                    if (value !== null && value !== undefined && value !== '') {
+                        html += `<tr><td><strong>${key}:</strong></td><td>${value}</td></tr>`;
+                    }
+                });
+                html += '</table>';
+                resultDiv.innerHTML = html;
+            } else {
+                resultDiv.innerHTML = '<p style="color: #ff6b6b;">Coil not found in database.</p>';
+            }
+        }
+
+        function showSuggestions() {
+            const input = document.getElementById('coilInput').value.trim().toUpperCase();
+            const suggestions = document.getElementById('suggestions');
+            
+            if (input.length === 0) {
+                suggestions.style.display = 'none';
+                return;
+            }
+            
+            const matches = coilData.filter(row => {
+                const matchKey = Object.keys(row).find(k => k.trim().toUpperCase() === 'MILL COIL NO');
+                return matchKey && String(row[matchKey]).trim().toUpperCase().includes(input);
+            }).slice(0, 10);
+            
+            if (matches.length > 0) {
+                suggestions.innerHTML = matches.map(row => {
+                    const matchKey = Object.keys(row).find(k => k.trim().toUpperCase() === 'MILL COIL NO');
+                    return `<div onclick="selectSuggestion('${row[matchKey]}')">${row[matchKey]}</div>`;
+                }).join('');
+                suggestions.style.display = 'block';
+            } else {
+                suggestions.style.display = 'none';
+            }
+        }
+
+        function selectSuggestion(coilNumber) {
+            document.getElementById('coilInput').value = coilNumber;
+            document.getElementById('suggestions').style.display = 'none';
+            searchCoil();
+            toggleClearButton();
+        }
+
+        function toggleClearButton() {
+            // This function exists for compatibility
+        }
+
+        async function startScanner() {
+            try {
+                // Check camera permission first
+                if (window.permissionManager && !window.permissionManager.isCameraPermissionGranted()) {
+                    const granted = await window.permissionManager.requestCameraPermission();
+                    if (!granted) {
+                        showMessage('Camera permission is required for QR code scanning', 'error');
+                        return;
+                    }
+                }
+                
+                const reader = document.getElementById('reader');
+                
+                if (html5QrCode && html5QrCode.getState() === Html5QrcodeScannerState.SCANNING) {
+                    console.log('Scanner already running');
+                    return;
+                }
+                
+                html5QrCode = new Html5Qrcode("reader");
+                
+                const config = {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 },
+                    aspectRatio: 1.0
+                };
+                
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    config,
+                    (decodedText, decodedResult) => {
+                        console.log('QR Code scanned:', decodedText);
+                        document.getElementById('coilInput').value = decodedText.trim();
+                        searchCoil();
+                        closeScanner();
+                    },
+                    (errorMessage) => {
+                        // Ignore scanning errors
+                    }
+                );
+                
+                showMessage('QR Scanner started. Double-tap to close.', 'info');
+                
+            } catch (error) {
+                console.error('Error starting QR scanner:', error);
+                showMessage('Error starting QR scanner: ' + error.message, 'error');
+            }
+        }
+
+        async function closeScanner() {
+            try {
+                if (html5QrCode) {
+                    await html5QrCode.stop();
+                    html5QrCode = null;
+                    document.getElementById('reader').innerHTML = '';
+                    showMessage('QR Scanner closed', 'info');
+                }
+            } catch (error) {
+                console.error('Error closing QR scanner:', error);
+            }
+        }
+
+        function showVehicleSuggestions() {
+            const input = document.getElementById('vehicleInput').value.trim().toUpperCase();
+            const suggestions = document.getElementById('vehicleSuggestions');
+            
+            if (input.length === 0) {
+                suggestions.style.display = 'none';
+                return;
+            }
+            
+            const matches = vehicleData.filter(row => {
+                const matchKey = Object.keys(row).find(k => k.trim().toUpperCase() === 'VEHICLE NO');
+                return matchKey && String(row[matchKey]).trim().toUpperCase().includes(input);
+            }).slice(0, 10);
+            
+            if (matches.length > 0) {
+                suggestions.innerHTML = matches.map(row => {
+                    const matchKey = Object.keys(row).find(k => k.trim().toUpperCase() === 'VEHICLE NO');
+                    return `<div onclick="selectVehicleSuggestion('${row[matchKey]}')">${row[matchKey]}</div>`;
+                }).join('');
+                suggestions.style.display = 'block';
+            } else {
+                suggestions.style.display = 'none';
+            }
+        }
+
+        function selectVehicleSuggestion(vehicleNumber) {
+            document.getElementById('vehicleInput').value = vehicleNumber;
+            document.getElementById('vehicleSuggestions').style.display = 'none';
+            toggleVehicleClearButton();
+        }
+
+        function toggleVehicleClearButton() {
+            const input = document.getElementById('vehicleInput').value.trim();
+            const clearBtn = document.getElementById('clearVehicleBtn');
+            if (clearBtn) {
+                clearBtn.style.display = input ? 'block' : 'none';
+            }
+        }
+
+        function clearVehicleInput() {
+            document.getElementById('vehicleInput').value = '';
+            document.getElementById('vehicleSuggestions').style.display = 'none';
+            toggleVehicleClearButton();
+        }
+
+        function addCoilToVehicle() {
+            const vehicleInput = document.getElementById('vehicleInput');
+            const coilInput = document.getElementById('coilInput');
+            
+            vehicleInput.disabled = true;
+            
+            const coil = coilInput.value.trim().toUpperCase();
+            const vehicle = vehicleInput.value.trim().toUpperCase();
+            
+            if (!coil || !vehicle) {
+                showMessage('Please enter both coil and vehicle number', 'error');
+                vehicleInput.disabled = false;
+                return;
+            }
+            
+            // Check if coil is already saved in vehicleCoilMap
+            let coilAlreadySaved = false;
+            for (const [savedVehicle, savedCoils] of Object.entries(vehicleCoilMap)) {
+                if (savedCoils.includes(coil)) {
+                    showMessage(`⚠️ WARNING: Coil ${coil} is already saved for vehicle ${savedVehicle}`, 'error');
+                    vehicleInput.disabled = false;
+                    return;
+                }
+            }
+            
+            // Check if coil is already added in current session
+            const coilAlreadyAdded = addedCoils.some(item => item.coilNumber === coil);
+            if (coilAlreadyAdded) {
+                showMessage(`⚠️ WARNING: Coil ${coil} is already added to the current list`, 'error');
+                vehicleInput.disabled = false;
+                return;
+            }
+            
+            addedCoils.push({ coilNumber: coil, vehicleNumber: vehicle });
+            updateAddedCoilsDisplay();
+            
+            coilInput.value = '';
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('suggestions').style.display = 'none';
+            
+            showMessage('Coil added to vehicle successfully', 'success');
+        }
+
+        function updateAddedCoilsDisplay() {
+            const div = document.getElementById('addedCoils');
+            if (addedCoils.length === 0) {
+                div.innerHTML = '';
+                return;
+            }
+            
+            // Calculate total gross weight
+            let totalGrossWeight = 0;
+            addedCoils.forEach(item => {
+                const coilDetails = findCoilDetails(item.coilNumber);
+                if (coilDetails) {
+                    const grossWeightKey = Object.keys(coilDetails).find(key => 
+                        key.trim().toUpperCase() === 'GROSS WT' || 
+                        key.trim().toUpperCase() === 'GROSS WEIGHT' ||
+                        key.trim().toUpperCase().includes('GROSS')
+                    );
+                    if (grossWeightKey) {
+                        const weight = parseFloat(coilDetails[grossWeightKey]) || 0;
+                        totalGrossWeight += weight;
+                    }
+                }
+            });
+            
+            let html = `<h3>Added Coils: | Total G.WT : ${(totalGrossWeight/1000).toFixed(3)}</h3>`;
+            addedCoils.forEach((item, index) => {
+                html += `<div style="background: rgba(255,255,255,0.1); padding: 8px; margin: 5px 0; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                  <span>${item.coilNumber} → ${item.vehicleNumber}</span>
+                  <button onclick="removeCoil(${index})" style="padding: 2px 4px; font-size: 9px; background: #e74c3c; color: white; border: none; border-radius: 2px; cursor: pointer; min-width: 45px;">Remove</button>
+                </div>`;
+            });
+            div.innerHTML = html;
+        }
+
+        function removeCoil(index) {
+            addedCoils.splice(index, 1);
+            updateAddedCoilsDisplay();
+        }
+
+        async function saveVehicleCoils() {
+            if (!addedCoils.length) {
+                showMessage('No coils to save', 'error');
+                return;
+            }
+            
+            try {
+                // Move current coils to saved map
+                addedCoils.forEach(({ coilNumber, vehicleNumber }) => {
+                    if (!vehicleCoilMap[vehicleNumber]) vehicleCoilMap[vehicleNumber] = [];
+                    vehicleCoilMap[vehicleNumber].push(coilNumber);
+                });
+                
+                // Generate OUT entries for GitHub storage
+                const now = new Date();
+                const currentDate = now.toLocaleDateString('en-GB').replace(/\//g, '-');
+                const currentTime = now.toLocaleTimeString('en-US', { hour12: true });
+                const outEntries = [];
+                
+                // Process only the newly added coils for GitHub storage
+                addedCoils.forEach(({ coilNumber, vehicleNumber }) => {
+                    // Find transporter for this vehicle
+                    let transporter = '';
+                    if (vehicleData.length > 0) {
+                        const vehicleColumnKey = Object.keys(vehicleData[0]).find(key => 
+                            key.trim().toUpperCase().includes('VEHICLE NO')
+                        );
+                        
+                        const transporterColumnKey = Object.keys(vehicleData[0]).find(key => 
+                            key.trim().toUpperCase().includes('TRANSPORTER')
+                        );
+                        
+                        if (vehicleColumnKey && transporterColumnKey) {
+                            const vehicleRecord = vehicleData.find(row => 
+                                String(row[vehicleColumnKey]).trim().toUpperCase() === vehicleNumber
+                            );
+                            if (vehicleRecord) {
+                                transporter = vehicleRecord[transporterColumnKey] || '';
+                            }
+                        }
+                    }
+                    
+                    // Find coil details to get gross weight
+                    const details = findCoilDetails(coilNumber);
+                    let grossWeight = '';
+                    
+                    if (details) {
+                        // Look for gross weight column
+                        const grossWeightKey = Object.keys(details).find(key => 
+                            key.trim().toUpperCase().includes('GROSS') && 
+                            key.trim().toUpperCase().includes('WT')
+                        );
+                        if (grossWeightKey) {
+                            grossWeight = details[grossWeightKey] || '';
+                        }
+                    }
+                    
+                    const outEntry = {
+                        'SERIAL NO': serialCounter++,
+                        'DATE & TIME': `${currentDate} ${currentTime}`,
+                        'VEHICLE NO': vehicleNumber,
+                        'MILL COIL NO': coilNumber,
+                        'TRANSPORTER': transporter || 'MPT',
+                        'GROSS WT': grossWeight
+                    };
+                    outEntries.push(outEntry);
+                });
+                
+                // Store data in GitHub Excel OUT sheet
+                if (outEntries.length > 0) {
+                    try {
+                        // Store in local outData array first
+                        if (!outData) outData = [];
+                        outData = [...outData, ...outEntries];
+                        
+                        // Save to GitHub
+                        showMessage('Saving data to GitHub...', 'info');
+                        console.log('Attempting to store data to GitHub, entries:', outEntries.length);
+                        console.log('Sample entry:', outEntries[0]);
+                        await window.githubAPI.storeOutData(outEntries);
+                        console.log('GitHub storage successful');
+                    } catch (error) {
+                        console.error('Failed to save to GitHub:', error);
+                        showMessage('Warning: Failed to save to GitHub - ' + error.message, 'error');
+                        return; // Don't proceed if GitHub save fails
+                    }
+                }
+                
+                addedCoils = [];
+                updateAddedCoilsDisplay();
+                
+                // Clear vehicle input after saving
+                const vehicleInput = document.getElementById('vehicleInput');
+                if (vehicleInput) {
+                    vehicleInput.value = '';
+                    vehicleInput.disabled = false;
+                }
+                
+                // Hide vehicle suggestions
+                document.getElementById('vehicleSuggestions').style.display = 'none';
+                
+                // Update button states
+                const generateBtn = document.getElementById('generateBtn');
+                const addBtn = document.getElementById('addBtn');
+                const saveBtn = document.getElementById('saveBtn');
+                
+                if (generateBtn) generateBtn.disabled = false;
+                if (addBtn) addBtn.disabled = true;
+                if (saveBtn) saveBtn.disabled = true;
+                
+                // Hide clear vehicle button
+                toggleVehicleClearButton();
+                
+                showMessage('Vehicle coils saved successfully in GITHUB', 'success');
+                
+            } catch (error) {
+                console.error('Error saving vehicle coils:', error);
+                showMessage('Error saving vehicle coils: ' + error.message, 'error');
+            }
+        }
+
+        // Enhanced generateTextFile function with proper storage permissions and GitHub sync
+        async function generateTextFile() {
+            try {
+                // Request storage permission first
+                if (window.permissionManager && !window.permissionManager.areStoragePermissionsGranted()) {
+                    const granted = await window.permissionManager.requestStoragePermission();
+                    if (!granted) {
+                        showMessage('Storage permission is required to save files', 'error');
+                        return;
+                    }
+                }
+                
+                const vehicleInput = document.getElementById('vehicleInput');
+                if (vehicleInput) {
+                    vehicleInput.disabled = false;
+                }
+                
+                const now = new Date();
+                const currentDate = now.toLocaleDateString('en-GB').replace(/\//g, '-');
+                const currentTime = now.toLocaleTimeString('en-US', { hour12: true });
+                
+                // Generate separate file for each vehicle
+                for (const [vehicle, coils] of Object.entries(vehicleCoilMap)) {
+                    // Find transporter for this vehicle
+                    let transporter = '';
+                    if (vehicleData.length > 0) {
+                        const vehicleColumnKey = Object.keys(vehicleData[0]).find(key => 
+                            key.trim().toUpperCase().includes('VEHICLE NO')
+                        );
+                        
+                        const transporterColumnKey = Object.keys(vehicleData[0]).find(key => 
+                            key.trim().toUpperCase().includes('TRANSPORTER')
+                        );
+                        
+                        if (vehicleColumnKey && transporterColumnKey) {
+                            const vehicleRecord = vehicleData.find(row => 
+                                String(row[vehicleColumnKey]).trim().toUpperCase() === vehicle
+                            );
+                            if (vehicleRecord) {
+                                transporter = vehicleRecord[transporterColumnKey] || '';
+                            }
+                        }
+                    }
+                    
+                    // Calculate total gross weight and prepare coil details
+                    let totalGrossWeight = 0;
+                    const coilDetails = [];
+                    
+                    coils.forEach(coil => {
+                        // Find coil details to get gross weight
+                        const details = findCoilDetails(coil);
+                        let grossWeight = '';
+                        
+                        if (details) {
+                            // Look for gross weight column
+                            const grossWeightKey = Object.keys(details).find(key => 
+                                key.trim().toUpperCase().includes('GROSS') && 
+                                key.trim().toUpperCase().includes('WT')
+                            );
+                            if (grossWeightKey) {
+                                grossWeight = details[grossWeightKey] || '';
+                            }
+                        }
+                        
+                        coilDetails.push({
+                            coilNo: coil,
+                            grossWeight: grossWeight
+                        });
+                        
+                        totalGrossWeight += parseFloat(grossWeight) || 0;
+                    });
+                    
+                    // Generate Excel-like HTML table format for text report
+                    let content = `<div style="font-family: Arial, sans-serif; padding: 10px;">
+                        <h3 style="text-align: center; margin-bottom: 5px;">A.S.Shipping Agencies Pvt Ltd,</h3>
+                        <h4 style="text-align: center; margin-top: 0;">(Greenways Group)</h4>
+                        <h4 style="text-align: center; margin-top: 0; color: #2c3e50;">Vessel Name : ${vesselName}</h4>
+                        <h3 style="text-align: center; color: #27ae60;">TEXT REPORT - ${vehicle}</h3>
+                        <p style="text-align: center; margin: 5px 0;">Vehicle: ${vehicle} | Transporter: ${transporter || 'MPT'}</p>
+                        <p style="text-align: center; margin: 5px 0;">Generated On: ${currentDate} ${currentTime}</p>
+                        
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px;">
+                            <thead>
+                                <tr style="background-color: #27ae60; color: white;">
+                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 70%;">Coil No</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 30%;">Gross WT</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                    
+                    // Add coil details in table format
+                    coilDetails.forEach((coil, index) => {
+                        const bgColor = index % 2 === 0 ? '#f9f9f9' : '#ffffff';
+                        content += `<tr style="background-color: ${bgColor};">
+                            <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${coil.coilNo}</td>
+                            <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">${coil.grossWeight}</td>
+                        </tr>`;
+                    });
+                    
+                    content += `</tbody>
+                            <tfoot>
+                                <tr style="background-color: #2c3e50; color: white; font-weight: bold;">
+                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">Total: ${coils.length} Coils</td>
+                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${totalGrossWeight.toFixed(2)}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                        
+                        <div style="margin-top: 20px; padding: 10px; background-color: #ecf0f1; border-radius: 5px;">
+                            <h4 style="margin: 0 0 10px 0;">Summary:</h4>
+                            <p style="margin: 5px 0;"><strong>Vehicle:</strong> ${vehicle}</p>
+                            <p style="margin: 5px 0;"><strong>Transporter:</strong> ${transporter || 'MPT'}</p>
+                            <p style="margin: 5px 0;"><strong>Total No of Coils:</strong> ${coils.length}</p>
+                            <p style="margin: 5px 0;"><strong>Total Gross WT:</strong> ${totalGrossWeight.toFixed(2)}</p>
+                        </div>
+                    </div>`;
+                    
+                    // Always show in modal for better display of HTML table content
+                    showReportInModal(`Text Report - ${vehicle}`, content);
+                }
+                
+                // Note: GitHub storage is now handled by the Save Button
+                
+                // Reset for next operation
+                vehicleCoilMap = {};
+                const generateBtn = document.getElementById('generateBtn');
+                const addBtn = document.getElementById('addBtn');
+                const saveBtn = document.getElementById('saveBtn');
+                
+                if (generateBtn) generateBtn.disabled = true;
+                if (addBtn) addBtn.disabled = false;
+                if (saveBtn) saveBtn.disabled = false;
+                
+                showMessage('Text reports generated successfully', 'success');
+                
+            } catch (error) {
+                console.error('Error generating text file:', error);
+                showMessage('Error generating text file: ' + error.message, 'error');
+            }
+        }
+
+        async function saveTextFile(content, fileName) {
+            try {
+                // Test if we can create download links (this fails in many APK environments)
+                const testBlob = new Blob(['test'], { type: 'text/plain' });
+                const testUrl = URL.createObjectURL(testBlob);
+                const testLink = document.createElement('a');
+                
+                // If download attribute is not supported or URL creation fails, we're likely in APK
+                if (!testLink.download || testUrl.startsWith('blob:null')) {
+                    URL.revokeObjectURL(testUrl);
+                    throw new Error('Download not supported in this environment');
+                }
+                
+                URL.revokeObjectURL(testUrl);
+                
+                // Create blob and download
+                const blob = new Blob([content], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                console.log(`Text file ${fileName} saved successfully`);
+            } catch (error) {
+                console.error('Error saving text file:', error);
+                throw error;
+            }
+        }
+
+        function findCoilDetails(coilNumber) {
+            if (coilData.length === 0) return null;
+            
+            const matchKey = Object.keys(coilData[0]).find(key => 
+                key.trim().toUpperCase() === 'MILL COIL NO' || 
+                key.trim().toUpperCase() === 'COIL NO' ||
+                key.trim().toUpperCase().includes('MILL COIL')
+            );
+            
+            if (!matchKey) return null;
+            
+            return coilData.find(row => 
+                String(row[matchKey]).trim().toUpperCase() === coilNumber.trim().toUpperCase()
+            );
+        }
+
+        function showReportVehicleSuggestions() {
+            const input = document.getElementById('reportVehicleInput').value.trim().toUpperCase();
+            const suggestions = document.getElementById('reportVehicleSuggestions');
+            
+            if (input.length === 0) {
+                suggestions.style.display = 'none';
+                return;
+            }
+            
+            const matches = vehicleData.filter(row => {
+                const matchKey = Object.keys(row).find(k => k.trim().toUpperCase() === 'VEHICLE NO');
+                return matchKey && String(row[matchKey]).trim().toUpperCase().includes(input);
+            }).slice(0, 10);
+            
+            if (matches.length > 0) {
+                suggestions.innerHTML = matches.map(row => {
+                    const matchKey = Object.keys(row).find(k => k.trim().toUpperCase() === 'VEHICLE NO');
+                    return `<div onclick="selectReportVehicleSuggestion('${row[matchKey]}')">${row[matchKey]}</div>`;
+                }).join('');
+                suggestions.style.display = 'block';
+            } else {
+                suggestions.style.display = 'none';
+            }
+        }
+
+        function selectReportVehicleSuggestion(vehicleNumber) {
+            document.getElementById('reportVehicleInput').value = vehicleNumber;
+            document.getElementById('reportVehicleSuggestions').style.display = 'none';
+            toggleReportVehicleClearButton();
+        }
+
+        function toggleReportVehicleClearButton() {
+            const input = document.getElementById('reportVehicleInput').value.trim();
+            const clearBtn = document.getElementById('clearReportVehicleBtn');
+            if (clearBtn) {
+                clearBtn.style.display = input ? 'block' : 'none';
+            }
+        }
+
+        function clearReportVehicleInput() {
+            document.getElementById('reportVehicleInput').value = '';
+            document.getElementById('reportVehicleSuggestions').style.display = 'none';
+            toggleReportVehicleClearButton();
+        }
+
+        // Enhanced APK Detection Function
+        function isRunningInAPK() {
+            // Multiple detection methods for different APK builders
+            return (
+                // Cordova/PhoneGap detection
+                typeof cordova !== 'undefined' ||
+                typeof window.cordova !== 'undefined' ||
+                // WebView detection
+                typeof window.AndroidInterface !== 'undefined' ||
+                typeof window.webkit !== 'undefined' ||
+                // User agent detection for WebView
+                navigator.userAgent.includes('wv') ||
+                navigator.userAgent.includes('Android') && navigator.userAgent.includes('Version/') ||
+                // App protocol detection
+                window.location.protocol === 'file:' ||
+                // Origin detection for APK
+                window.location.origin === 'null' ||
+                window.location.hostname === '' ||
+                // Additional WebView indicators
+                window.navigator.standalone ||
+                window.matchMedia('(display-mode: standalone)').matches ||
+                // Check if download attribute doesn't work (APK limitation)
+                !document.createElement('a').download === undefined
+            );
+        }
+
+        // APK-Compatible Report Functions - ENHANCED APK DETECTION  
+        async function generateAllOutDataReport(event) {
+            try {
+                // Prevent any default form submission or page refresh
+                if (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                
+                showMessage('Generating all OUT data report...', 'info');
+                
+                // Force data reload to ensure we have the latest data
+                let reportData = [];
+                
+                // First try to get fresh data from GitHub
+                try {
+                    console.log('Loading fresh data from GitHub...');
+                    reportData = await window.githubAPI.loadOutData();
+                    console.log('GitHub data loaded, length:', reportData.length);
+                    
+                    // Update local outData with fresh data
+                    outData = reportData;
+                    
+                } catch (error) {
+                    console.error('Error loading GitHub OUT data:', error);
+                    // Fallback to local data if GitHub fails
+                    reportData = outData || [];
+                    console.log('Using local outData as fallback, length:', reportData.length);
+                }
+                
+                console.log('Final reportData for All OUT Report:', reportData.length, 'records');
+                console.log('Sample data:', reportData.slice(0, 3));
+                
+                if (reportData.length === 0) {
+                    showMessage('⚠️ WARNING: No OUT data found to generate report', 'error');
+                    return;
+                }
+                
+                // Generate Excel-like HTML table format report
+                const currentDate = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+                const currentTime = new Date().toLocaleTimeString('en-US', { hour12: true });
+                
+                let content = `<div style="font-family: Arial, sans-serif; padding: 10px;">
+                    <h3 style="text-align: center; margin-bottom: 5px;">A.S.Shipping Agencies Pvt Ltd,</h3>
+                    <h4 style="text-align: center; margin-top: 0;">(Greenways Group)</h4>
+                    <h4 style="text-align: center; margin-top: 0; color: #2c3e50;">Vessel Name : ${vesselName}</h4>
+                    <h3 style="text-align: center; color: #2c3e50;">ALL OUT DATA REPORT</h3>
+                    <p style="text-align: center; margin: 5px 0;">Generated on: ${currentDate} ${currentTime}</p>
+                    
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px;">
+                        <thead>
+                            <tr style="background-color: #3498db; color: white;">
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 10%;">Serial No</th>
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 20%;">Date & Time</th>
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 15%;">Transporter</th>
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 15%;">Vehicle No</th>
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 25%;">Coil No</th>
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 15%;">Gross WT</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                
+                // Data rows with alternating colors
+                reportData.forEach((row, index) => {
+                    const bgColor = index % 2 === 0 ? '#f9f9f9' : '#ffffff';
+                    content += `<tr style="background-color: ${bgColor};">
+                        <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${row['SERIAL NO'] || ''}</td>
+                        <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${row['DATE & TIME'] || ''}</td>
+                        <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${row['TRANSPORTER'] || ''}</td>
+                        <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${row['VEHICLE NO'] || ''}</td>
+                        <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${row['MILL COIL NO'] || ''}</td>
+                        <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">${row['GROSS WT'] || ''}</td>
+                    </tr>`;
+                });
+                
+                // Calculate total gross weight
+                const totalGrossWT = reportData.reduce((sum, row) => {
+                    return sum + (parseFloat(row['GROSS WT']) || 0);
+                }, 0);
+                
+                content += `</tbody>
+                        <tfoot>
+                            <tr style="background-color: #2c3e50; color: white; font-weight: bold;">
+                                <td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-align: center;">SUMMARY</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">Total: ${reportData.length}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${totalGrossWT.toFixed(2)}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                    
+                    <div style="margin-top: 20px; padding: 10px; background-color: #ecf0f1; border-radius: 5px;">
+                        <h4 style="margin: 0 0 10px 0;">Summary:</h4>
+                        <p style="margin: 5px 0;"><strong>Total Records:</strong> ${reportData.length}</p>
+                        <p style="margin: 5px 0;"><strong>Total Coils:</strong> ${reportData.length}</p>
+                        <p style="margin: 5px 0;"><strong>Total Gross Weight:</strong> ${totalGrossWT.toFixed(2)}</p>
+                    </div>
+                </div>`;
+                
+                console.log('Final report content length:', content.length);
+                console.log('Report data used:', reportData.length, 'records');
+                
+                // Always show in modal for better display of HTML table content
+                showReportInModal('All OUT Data Report', content);
+                
+                showMessage(`All OUT data report generated successfully - ${reportData.length} records`, 'success');
+                
+            } catch (error) {
+                console.error('Error generating all OUT data report:', error);
+                showMessage('Error generating report: ' + error.message, 'error');
+            }
+        }
+
+        async function generateVehicleOutReport() {
+            try {
+                const vehicleNumber = document.getElementById('reportVehicleInput').value.trim().toUpperCase();
+                
+                if (!vehicleNumber) {
+                    showMessage('Please enter a vehicle number', 'error');
+                    return;
+                }
+                
+                showMessage('Generating vehicle OUT report...', 'info');
+                
+                // Use local outData if available, otherwise try to get from GitHub
+                let allOutData = outData || [];
+                
+                if (allOutData.length === 0) {
+                    try {
+                        allOutData = await window.githubAPI.loadOutData();
+                    } catch (error) {
+                        console.error('Error loading GitHub OUT data:', error);
+                        // Continue with empty data if both local and GitHub fail
+                    }
+                }
+                
+                const vehicleOutData = allOutData.filter(row => 
+                    String(row['VEHICLE NO']).trim().toUpperCase() === vehicleNumber
+                );
+                
+                if (vehicleOutData.length === 0) {
+                    showMessage(`⚠️ WARNING: No OUT data found for vehicle ${vehicleNumber}`, 'error');
+                    return;
+                }
+                
+                // Generate Excel-like HTML table format report
+                const currentDate = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+                const currentTime = new Date().toLocaleTimeString('en-US', { hour12: true });
+                
+                let content = `<div style="font-family: Arial, sans-serif; padding: 10px;">
+                    <h3 style="text-align: center; margin-bottom: 5px;">A.S.Shipping Agencies Pvt Ltd,</h3>
+                    <h4 style="text-align: center; margin-top: 0;">(Greenways Group)</h4>
+                    <h4 style="text-align: center; margin-top: 0; color: #2c3e50;">Vessel Name : ${vesselName}</h4>
+                    <h3 style="text-align: center; color: #2c3e50;">VEHICLE OUT DATA REPORT - ${vehicleNumber}</h3>
+                    <p style="text-align: center; margin: 5px 0;">Generated on: ${currentDate} ${currentTime}</p>
+                    
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px;">
+                        <thead>
+                            <tr style="background-color: #e74c3c; color: white;">
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 10%;">Serial No</th>
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 20%;">Date & Time</th>
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 15%;">Transporter</th>
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 15%;">Vehicle No</th>
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 25%;">Coil No</th>
+                                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 15%;">Gross WT</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                
+                // Data rows with alternating colors
+                vehicleOutData.forEach((row, index) => {
+                    const bgColor = index % 2 === 0 ? '#f9f9f9' : '#ffffff';
+                    content += `<tr style="background-color: ${bgColor};">
+                        <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${row['SERIAL NO'] || ''}</td>
+                        <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${row['DATE & TIME'] || ''}</td>
+                        <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${row['TRANSPORTER'] || ''}</td>
+                        <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${row['VEHICLE NO'] || ''}</td>
+                        <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${row['MILL COIL NO'] || ''}</td>
+                        <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">${row['GROSS WT'] || ''}</td>
+                    </tr>`;
+                });
+                
+                // Calculate total gross weight
+                const totalGrossWT = vehicleOutData.reduce((sum, row) => {
+                    return sum + (parseFloat(row['GROSS WT']) || 0);
+                }, 0);
+                
+                content += `</tbody>
+                        <tfoot>
+                            <tr style="background-color: #2c3e50; color: white; font-weight: bold;">
+                                <td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-align: center;">SUMMARY FOR ${vehicleNumber}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">Total: ${vehicleOutData.length}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${totalGrossWT.toFixed(2)}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                    
+                    <div style="margin-top: 20px; padding: 10px; background-color: #ecf0f1; border-radius: 5px;">
+                        <h4 style="margin: 0 0 10px 0;">Summary for Vehicle ${vehicleNumber}:</h4>
+                        <p style="margin: 5px 0;"><strong>Total Records:</strong> ${vehicleOutData.length}</p>
+                        <p style="margin: 5px 0;"><strong>Total Coils:</strong> ${vehicleOutData.length}</p>
+                        <p style="margin: 5px 0;"><strong>Total Gross Weight:</strong> ${totalGrossWT.toFixed(2)}</p>
+                    </div>
+                </div>`;
+                
+                // Always show in modal for better display of HTML table content
+                showReportInModal(`Vehicle Report - ${vehicleNumber}`, content);
+                
+                showMessage('Vehicle OUT report generated successfully', 'success');
+                
+            } catch (error) {
+                console.error('Error generating vehicle OUT report:', error);
+                showMessage('Error generating report: ' + error.message, 'error');
+            }
+        }
+
+        // APK Modal Functions - NEW FOR APK COMPATIBILITY
+        function showReportInModal(title, content) {
+            const modal = document.getElementById('reportModal');
+            const modalTitle = document.getElementById('reportModalTitle');
+            const modalContent = document.getElementById('reportModalContent');
+            
+            // Clear previous content first
+            modalContent.innerHTML = '';
+            modalTitle.textContent = '';
+            
+            // Use setTimeout to ensure DOM is ready
+            setTimeout(() => {
+                modalTitle.textContent = title;
+                
+                // Check if content is HTML or plain text
+                if (content.includes('<table') || content.includes('<div')) {
+                    modalContent.innerHTML = content;
+                    modalContent.classList.remove('text-content');
+                } else {
+                    modalContent.textContent = content;
+                    modalContent.classList.add('text-content');
+                }
+                
+                // Ensure modal is visible and force reflow
+                modal.classList.add('show');
+                modal.style.display = 'flex';
+                modal.style.visibility = 'visible';
+                modal.style.opacity = '1';
+                
+                // Force browser to recalculate layout
+                modal.offsetHeight;
+                
+                console.log('Modal shown with content length:', content.length);
+                console.log('Modal content element:', modalContent);
+                console.log('Modal display style:', modal.style.display);
+                
+            }, 100);
+        }
+
+        function closeReportModal() {
+            const modal = document.getElementById('reportModal');
+            modal.classList.remove('show');
+            modal.style.display = 'none';
+            modal.style.visibility = 'hidden';
+            modal.style.opacity = '0';
+        }
+
+        // Print function for reports
+        function printReport() {
+            try {
+                window.print();
+                showMessage('Print dialog opened', 'success');
+            } catch (error) {
+                console.error('Error printing report:', error);
+                showMessage('Error opening print dialog: ' + error.message, 'error');
+            }
+        }
+
+        // PDF download function for reports
+        function downloadReportAsPDF() {
+            try {
+                const title = document.getElementById('reportModalTitle').textContent;
+                const modalContent = document.getElementById('reportModalContent');
+                
+                // Initialize jsPDF
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'mm', 'a4');
+                
+                // Add header
+                doc.setFontSize(14);
+                doc.setFont(undefined, 'bold');
+                doc.text('A.S.Shipping Agencies Pvt Ltd', 105, 15, { align: 'center' });
+                doc.text('(Greenways Group)', 105, 22, { align: 'center' });
+                
+                doc.setFontSize(12);
+                doc.text(title, 105, 32, { align: 'center' });
+                
+                doc.setFontSize(8);
+                doc.setFont(undefined, 'normal');
+                const currentDate = new Date().toLocaleDateString('en-GB') + ' ' + new Date().toLocaleTimeString();
+                doc.text('Generated on: ' + currentDate, 105, 38, { align: 'center' });
+                
+                let yPosition = 50;
+                
+                // Check if content has a table
+                if (modalContent.innerHTML.includes('<table')) {
+                    const table = modalContent.querySelector('table');
+                    if (table) {
+                        const rows = table.querySelectorAll('tr');
+                        
+                        // Calculate column widths dynamically
+                        const headerRow = table.querySelector('tr');
+                        const columnCount = headerRow ? headerRow.querySelectorAll('th, td').length : 0;
+                        const pageWidth = doc.internal.pageSize.width - 20; // 10mm margin on each side
+                        const columnWidth = pageWidth / columnCount;
+                        
+                        rows.forEach((row, rowIndex) => {
+                            const cells = row.querySelectorAll('th, td');
+                            let xPosition = 10;
+                            let maxCellHeight = 0;
+                            
+                            // First pass: calculate the height needed for this row
+                            cells.forEach((cell, cellIndex) => {
+                                const cellText = cell.textContent.trim();
+                                const lines = doc.splitTextToSize(cellText, columnWidth - 2);
+                                const cellHeight = lines.length * 4; // 4mm per line
+                                maxCellHeight = Math.max(maxCellHeight, cellHeight);
+                            });
+                            
+                            // Check if we need a new page
+                            if (yPosition + maxCellHeight > doc.internal.pageSize.height - 20) {
+                                doc.addPage();
+                                yPosition = 20;
+                            }
+                            
+                            // Second pass: draw the cells
+                            cells.forEach((cell, cellIndex) => {
+                                const cellText = cell.textContent.trim();
+                                
+                                // Set font based on cell type
+                                if (row.querySelector('th') || cell.tagName === 'TH') {
+                                    doc.setFontSize(9);
+                                    doc.setFont(undefined, 'bold');
+                                } else {
+                                    doc.setFontSize(8);
+                                    doc.setFont(undefined, 'normal');
+                                }
+                                
+                                // Draw cell border
+                                doc.rect(xPosition, yPosition, columnWidth, maxCellHeight);
+                                
+                                // Add text with word wrapping
+                                const lines = doc.splitTextToSize(cellText, columnWidth - 2);
+                                doc.text(lines, xPosition + 1, yPosition + 3);
+                                
+                                xPosition += columnWidth;
+                            });
+                            
+                            yPosition += maxCellHeight;
+                        });
+                        
+                        // Add summary section if available
+                        const summaryDiv = modalContent.querySelector('div[style*="background-color: #ecf0f1"], div[style*="margin-top: 20px"]');
+                        if (summaryDiv && !summaryDiv.querySelector('table')) {
+                            yPosition += 10;
+                            doc.setFontSize(8);
+                            doc.setFont(undefined, 'bold');
+                            
+                            const summaryText = summaryDiv.textContent.trim();
+                            const summaryLines = doc.splitTextToSize(summaryText, pageWidth);
+                            doc.text(summaryLines, 10, yPosition);
+                        }
+                    }
+                } else {
+                    // Handle plain text content
+                    doc.setFontSize(8);
+                    doc.setFont(undefined, 'normal');
+                    const lines = doc.splitTextToSize(modalContent.textContent, pageWidth);
+                    doc.text(lines, 10, yPosition);
+                }
+                
+                // Generate filename
+                const cleanTitle = title.replace(/[^a-z0-9\s]/gi, '').replace(/\s+/g, '_').toLowerCase();
+                const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+                const filename = `${cleanTitle}_${timestamp}.pdf`;
+                
+                // Save the PDF
+                doc.save(filename);
+                showMessage('PDF downloaded successfully', 'success');
+                
+            } catch (error) {
+                console.error('Error generating PDF:', error);
+                showMessage('Error generating PDF: ' + error.message, 'error');
+            }
+        }
+
+        // Enhanced Share functionality for APK compatibility
+        async function shareReport() {
+            try {
+                const title = document.getElementById('reportModalTitle').textContent;
+                const modalContent = document.getElementById('reportModalContent');
+                
+                // Extract text content from HTML or get plain text
+                let content;
+                if (modalContent.innerHTML.includes('<table')) {
+                    // Convert HTML table to plain text format
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = modalContent.innerHTML;
+                    
+                    // Remove HTML tags and format as plain text
+                    const tables = tempDiv.querySelectorAll('table');
+                    let textContent = '';
+                    
+                    if (tables.length > 0) {
+                        const table = tables[0];
+                        const rows = table.querySelectorAll('tr');
+                        
+                        // Add header info
+                        const headers = tempDiv.querySelectorAll('h3, h4, p');
+                        headers.forEach(header => {
+                            if (header.closest('table')) return; // Skip headers inside tables
+                            textContent += header.textContent.trim() + '\n';
+                        });
+                        textContent += '\n';
+                        
+                        // Process table rows
+                        rows.forEach((row, index) => {
+                            const cells = row.querySelectorAll('th, td');
+                            const rowText = Array.from(cells).map(cell => cell.textContent.trim()).join('\t');
+                            textContent += rowText + '\n';
+                            
+                            // Add separator after header row
+                            if (index === 0 && row.querySelector('th')) {
+                                textContent += '='.repeat(80) + '\n';
+                            }
+                        });
+                        
+                        // Add summary section
+                        const summaryDiv = tempDiv.querySelector('div');
+                        if (summaryDiv && !summaryDiv.querySelector('table')) {
+                            textContent += '\n' + summaryDiv.textContent.trim();
+                        }
+                    }
+                    
+                    content = textContent;
+                } else {
+                    content = modalContent.textContent;
+                }
+                
+                // Method 1: Android Intent (for APK environment)
+                if (typeof Android !== 'undefined' && Android.shareText) {
+                    try {
+                        Android.shareText(title, content);
+                        showMessage('Report shared successfully via Android share', 'success');
+                        return;
+                    } catch (error) {
+                        console.log('Android share method failed:', error);
+                    }
+                }
+                
+                // Method 2: Web Share API with file support (modern browsers and some APK environments)
+                if (navigator.share && navigator.canShare) {
+                    try {
+                        const shareData = {
+                            title: title,
+                            text: content
+                        };
+                        
+                        if (navigator.canShare(shareData)) {
+                            await navigator.share(shareData);
+                            showMessage('Report shared successfully', 'success');
+                            return;
+                        }
+                    } catch (error) {
+                        console.log('Web Share API with canShare failed:', error);
+                    }
+                }
+                
+                // Method 3: Legacy Web Share API
+                if (navigator.share) {
+                    try {
+                        await navigator.share({
+                            title: title,
+                            text: content
+                        });
+                        showMessage('Report shared successfully', 'success');
+                        return;
+                    } catch (error) {
+                        console.log('Legacy Web Share API failed:', error);
+                    }
+                }
+                
+                // Method 4: File creation and share (APK-compatible)
+                try {
+                    const blob = new Blob([`${title}\n\n${content}`], { type: 'text/plain' });
+                    const file = new File([blob], `${title.replace(/[^a-z0-9]/gi, '_')}.txt`, { type: 'text/plain' });
+                    
+                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                            title: title,
+                            files: [file]
+                        });
+                        showMessage('Report file shared successfully', 'success');
+                        return;
+                    }
+                } catch (error) {
+                    console.log('File share method failed:', error);
+                }
+                
+                // Method 5: Clipboard API
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    try {
+                        const shareText = `${title}\n\n${content}`;
+                        await navigator.clipboard.writeText(shareText);
+                        showMessage('Report copied to clipboard - you can paste it in any app to share', 'success');
+                        return;
+                    } catch (error) {
+                        console.log('Clipboard API failed:', error);
+                    }
+                }
+                
+                // Method 6: Create downloadable file (fallback for APK)
+                try {
+                    const shareText = `${title}\n\n${content}`;
+                    const blob = new Blob([shareText], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${title.replace(/[^a-z0-9]/gi, '_')}.txt`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showMessage('Report downloaded - you can share the file from your downloads', 'success');
+                    return;
+                } catch (error) {
+                    console.log('Download method failed:', error);
+                }
+                
+                // Method 7: Fallback selection method
+                const textArea = document.createElement('textarea');
+                textArea.value = `${title}\n\n${content}`;
+                textArea.style.position = 'fixed';
+                textArea.style.top = '0';
+                textArea.style.left = '0';
+                textArea.style.width = '2em';
+                textArea.style.height = '2em';
+                textArea.style.padding = '0';
+                textArea.style.border = 'none';
+                textArea.style.outline = 'none';
+                textArea.style.boxShadow = 'none';
+                textArea.style.background = 'transparent';
+                textArea.style.zIndex = '9999';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                
+                try {
+                    const successful = document.execCommand('copy');
+                    if (successful) {
+                        showMessage('Report copied to clipboard - you can paste it in any app to share', 'success');
+                    } else {
+                        showMessage('Please manually select and copy the report text to share', 'info');
+                    }
+                } catch (error) {
+                    showMessage('Please manually select and copy the report text to share', 'info');
+                }
+                
+                document.body.removeChild(textArea);
+                
+            } catch (error) {
+                console.error('All share methods failed:', error);
+                showMessage('Please manually copy the report text to share it', 'info');
+            }
+        }
+
+
+
+        async function uploadExcel() {
+            try {
+                const fileInput = document.getElementById('excelFile');
+                const file = fileInput.files[0];
+                
+                if (!file) {
+                    showMessage('⚠️ WARNING: Please select an Excel file to upload', 'error');
+                    return;
+                }
+                
+                showMessage('Uploading Excel file to GitHub...', 'info');
+                
+                // Read the file as array buffer
+                const arrayBuffer = await file.arrayBuffer();
+                const uint8Array = new Uint8Array(arrayBuffer);
+                
+                // Convert to base64 for GitHub API
+                const base64String = btoa(String.fromCharCode(...uint8Array));
+                
+                // Upload to GitHub
+                const result = await window.githubAPI.uploadExcelFile(base64String, file.name);
+                
+                if (result.success) {
+                    showMessage(`Excel file "${file.name}" uploaded to GitHub successfully`, 'success');
+                    
+                    // Clear the file input
+                    fileInput.value = '';
+                    document.getElementById('fileName').textContent = '';
+                    
+                    // Optionally refresh the coil data from the uploaded file
+                    await loadCoilDataFromFile();
+                } else {
+                    showMessage(`Error uploading Excel file: ${result.error}`, 'error');
+                }
+                
+            } catch (error) {
+                console.error('Error uploading Excel file:', error);
+                showMessage('Error uploading Excel file: ' + error.message, 'error');
+            }
+        }
+
+        function clearInputs() {
+            document.getElementById('coilInput').value = '';
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('suggestions').style.display = 'none';
+            toggleClearButton();
+        }
+
+        function clearLocalStorage() {
+            if (confirm('Are you sure you want to clear all local storage data?')) {
+                localStorage.clear();
+                showMessage('Local storage cleared', 'success');
+            }
+        }
+
+        function resetApp() {
+            if (confirm('Are you sure you want to reset the app? This will clear all data and reload the page.')) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        function setGithubToken() {
+            // Check if a token is already set by another user
+            const existingToken = localStorage.getItem('github_token');
+            if (existingToken) {
+                const confirm = window.confirm('A GitHub token is already set by another user. The app is working with the existing token. Do you want to override it?');
+                if (!confirm) {
+                    showMessage('Using existing GitHub token. App is working normally.', 'info');
+                    return;
+                }
+            }
+            
+            const token = prompt('Enter your GitHub Personal Access Token:');
+            if (token) {
+                window.githubAPI.setToken(token);
+                showMessage('GitHub token set successfully for all users', 'success');
+                updateGithubTokenButtonStatus();
+            }
+        }
+
+        function updateGithubTokenButtonStatus() {
+            const button = document.getElementById('githubTokenBtn');
+            const existingToken = localStorage.getItem('github_token');
+            
+            if (existingToken && button) {
+                button.textContent = 'GitHub Token Set ✓';
+                button.style.backgroundColor = '#27ae60';
+                button.title = 'GitHub token is already configured. Click to change it.';
+            } else if (button) {
+                button.textContent = 'Set GitHub Token';
+                button.style.backgroundColor = '#e74c3c';
+                button.title = 'Click to set GitHub token for all users.';
+            }
+        }
+
+        async function updateAppFromGithub() {
+            try {
+                showMessage('Checking for app updates...', 'info');
+                
+                const response = await fetch('https://raw.githubusercontent.com/gmanand23/Coil_Info/main/index.html?' + new Date().getTime());
+                if (response.ok) {
+                    const newContent = await response.text();
+                    
+                    if (confirm('App update available. Update now? This will reload the page.')) {
+                        document.open();
+                        document.write(newContent);
+                        document.close();
+                    }
+                } else {
+                    showMessage('No updates available', 'info');
+                }
+                
+            } catch (error) {
+                console.error('Error checking for updates:', error);
+                showMessage('Error checking for updates: ' + error.message, 'error');
+            }
+        }
+
+        function showMessage(text, type = 'info') {
+            if (window.permissionManager) {
+                window.permissionManager.showMessage(text, type);
+            } else {
+                console.log(`[${type.toUpperCase()}] ${text}`);
+            }
+        }
+
+        // Initialize when permissions are ready
+        document.addEventListener('deviceready', async () => {
+            console.log('Device ready - initializing permissions');
+            await window.permissionManager.initialize();
+        }, false);
+
+        // Fallback for browser testing
+        if (typeof cordova === 'undefined') {
+            document.addEventListener('DOMContentLoaded', async () => {
+                console.log('Browser mode - initializing permissions');
+                await window.permissionManager.initialize();
+            });
+        }
+    </script>
+</body>
+</html>
