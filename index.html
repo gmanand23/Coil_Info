@@ -2620,143 +2620,100 @@
                 const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
                 const filename = `${cleanTitle}_${timestamp}.pdf`;
                 
-                // Enhanced save method for APK/mobile devices with multiple fallback options
-                const isAPK = window.location.protocol === 'file:' || 
-                             window.AndroidInterface || 
-                             typeof Android !== 'undefined' ||
-                             navigator.userAgent.includes('wv'); // WebView detection
-                
-                const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                
-                // Method 1: Try APK-specific save methods first
-                if (isAPK || isMobile) {
-                    try {
-                        // Generate PDF as base64 for APK compatibility
-                        const pdfBase64 = doc.output('datauristring');
-                        
-                        // Method 1a: Try Android WebView interface
-                        if (typeof Android !== 'undefined' && Android.savePDF) {
-                            try {
-                                Android.savePDF(pdfBase64, filename);
-                                showMessage('PDF saved successfully via Android interface!', 'success');
-                                return;
-                            } catch (androidError) {
-                                console.log('Android PDF save failed:', androidError);
-                            }
-                        }
-                        
-                        // Method 1b: Try custom WebView bridge
-                        if (window.AndroidInterface && window.AndroidInterface.savePDF) {
-                            try {
-                                window.AndroidInterface.savePDF(pdfBase64, filename);
-                                showMessage('PDF saved successfully via WebView bridge!', 'success');
-                                return;
-                            } catch (bridgeError) {
-                                console.log('WebView bridge save failed:', bridgeError);
-                            }
-                        }
-                        
-                        // Method 1c: Try blob download with enhanced mobile support
-                        try {
-                            const pdfBlob = doc.output('blob');
-                            
-                            // Create a more persistent download link for APK
-                            const url = URL.createObjectURL(pdfBlob);
-                            const downloadLink = document.createElement('a');
-                            downloadLink.href = url;
-                            downloadLink.download = filename;
-                            downloadLink.setAttribute('target', '_blank');
-                            downloadLink.setAttribute('rel', 'noopener');
-                            
-                            // Make link visible for APK debugging
-                            downloadLink.style.position = 'fixed';
-                            downloadLink.style.top = '50%';
-                            downloadLink.style.left = '50%';
-                            downloadLink.style.transform = 'translate(-50%, -50%)';
-                            downloadLink.style.zIndex = '999999';
-                            downloadLink.style.padding = '10px 20px';
-                            downloadLink.style.background = '#3498db';
-                            downloadLink.style.color = 'white';
-                            downloadLink.style.textDecoration = 'none';
-                            downloadLink.style.borderRadius = '5px';
-                            downloadLink.style.fontFamily = 'Arial, sans-serif';
-                            downloadLink.style.fontSize = '16px';
-                            downloadLink.textContent = 'Download PDF';
-                            
-                            document.body.appendChild(downloadLink);
-                            
-                            // For APK, show the link and let user click manually
-                            if (isAPK) {
-                                showMessage('PDF ready for download! Please click the blue download button.', 'info');
-                                
-                                // Auto-remove after 30 seconds
-                                setTimeout(() => {
-                                    if (document.body.contains(downloadLink)) {
-                                        document.body.removeChild(downloadLink);
-                                        URL.revokeObjectURL(url);
-                                    }
-                                }, 30000);
-                                
-                                return;
-                            } else {
-                                // For regular mobile, try automatic download
-                                downloadLink.click();
-                                
-                                setTimeout(() => {
-                                    document.body.removeChild(downloadLink);
-                                    URL.revokeObjectURL(url);
-                                }, 1000);
-                                
-                                showMessage('PDF downloaded! Check your Downloads folder', 'success');
-                                return;
-                            }
-                            
-                        } catch (blobError) {
-                            console.log('Blob download failed:', blobError);
-                        }
-                        
-                        // Method 1d: Try data URI approach for APK
-                        try {
-                            const dataUri = doc.output('datauristring');
-                            const newWindow = window.open();
-                            
-                            if (newWindow) {
-                                newWindow.document.write(`
-                                    <html>
-                                        <head><title>Download PDF</title></head>
-                                        <body style="font-family: Arial; text-align: center; padding: 50px;">
-                                            <h2>PDF Generated Successfully</h2>
-                                            <p>Click the link below to download your PDF:</p>
-                                            <a href="${dataUri}" download="${filename}" 
-                                               style="display: inline-block; padding: 15px 30px; background: #3498db; 
-                                                      color: white; text-decoration: none; border-radius: 5px; font-size: 16px;">
-                                                Download ${filename}
-                                            </a>
-                                            <br><br>
-                                            <small>If download doesn't start automatically, right-click the link and select "Save As"</small>
-                                        </body>
-                                    </html>
-                                `);
-                                newWindow.document.close();
-                                showMessage('PDF opened in new window for download', 'success');
-                                return;
-                            }
-                        } catch (windowError) {
-                            console.log('New window approach failed:', windowError);
-                        }
-                        
-                    } catch (mobileError) {
-                        console.log('All mobile methods failed:', mobileError);
-                    }
-                }
-                
-                // Method 2: Desktop fallback
+                // APK-compatible PDF save with simplified approach
                 try {
-                    doc.save(filename);
-                    showMessage('PDF downloaded successfully', 'success');
-                } catch (desktopError) {
-                    console.log('Desktop save failed:', desktopError);
-                    throw new Error('All PDF save methods failed');
+                    // Generate PDF data
+                    const pdfData = doc.output('arraybuffer');
+                    const pdfBase64 = doc.output('datauri');
+                    
+                    // Create full-screen modal for APK download
+                    const modal = document.createElement('div');
+                    modal.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0, 0, 0, 0.95);
+                        z-index: 999999;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: center;
+                        color: white;
+                        font-family: 'Comic Neue', Arial, sans-serif;
+                        text-align: center;
+                        padding: 20px;
+                        box-sizing: border-box;
+                    `;
+                    
+                    modal.innerHTML = `
+                        <div style="max-width: 400px; width: 100%;">
+                            <h2 style="color: #00ff66; margin-bottom: 20px;">PDF Report Generated</h2>
+                            <p style="margin-bottom: 30px; line-height: 1.5;">Your PDF report "${filename}" is ready for download.</p>
+                            
+                            <div style="margin-bottom: 30px;">
+                                <a href="${pdfBase64}" download="${filename}" 
+                                   style="display: block; width: 100%; padding: 15px; background: linear-gradient(135deg, #3498db, #2980b9); 
+                                          color: white; text-decoration: none; border-radius: 8px; font-size: 18px; font-weight: bold; 
+                                          margin-bottom: 15px; box-sizing: border-box;">
+                                    📱 Download PDF File
+                                </a>
+                                
+                                <button onclick="
+                                    try {
+                                        const newTab = window.open();
+                                        newTab.document.write('<html><head><title>PDF Download</title></head><body style=\\'text-align:center; padding:50px; font-family:Arial;\\'>');
+                                        newTab.document.write('<h2>PDF Download</h2>');
+                                        newTab.document.write('<p>Right-click the link below and select \\'Save As\\' to download:</p>');
+                                        newTab.document.write('<a href=\\'${pdfBase64}\\' download=\\'${filename}\\' style=\\'padding:15px 30px; background:#3498db; color:white; text-decoration:none; border-radius:5px; font-size:16px;\\'>Download ${filename}</a>');
+                                        newTab.document.write('</body></html>');
+                                        newTab.document.close();
+                                        this.parentElement.parentElement.parentElement.remove();
+                                    } catch(e) {
+                                        alert('Unable to open new window. Please use the download button above.');
+                                    }
+                                " style="width: 100%; padding: 12px; background: #2c3e50; color: white; border: none; 
+                                         border-radius: 5px; font-size: 14px; cursor: pointer; margin-bottom: 15px;">
+                                    🌐 Open in New Window
+                                </button>
+                                
+                                <button onclick="
+                                    navigator.clipboard.writeText('${pdfBase64}').then(() => {
+                                        alert('PDF data copied to clipboard! You can paste it in a browser to download.');
+                                    }).catch(() => {
+                                        const textarea = document.createElement('textarea');
+                                        textarea.value = '${pdfBase64}';
+                                        document.body.appendChild(textarea);
+                                        textarea.select();
+                                        document.execCommand('copy');
+                                        document.body.removeChild(textarea);
+                                        alert('PDF data copied to clipboard! Paste it in a browser address bar to download.');
+                                    });
+                                " style="width: 100%; padding: 12px; background: #8e44ad; color: white; border: none; 
+                                         border-radius: 5px; font-size: 14px; cursor: pointer; margin-bottom: 20px;">
+                                    📋 Copy PDF Link
+                                </button>
+                            </div>
+                            
+                            <p style="font-size: 12px; color: #bdc3c7; margin-bottom: 20px;">
+                                If none of the above work, try copying the PDF link and pasting it in your browser.
+                            </p>
+                            
+                            <button onclick="this.parentElement.parentElement.remove()" 
+                                    style="padding: 12px 30px; background: #e74c3c; color: white; border: none; 
+                                           border-radius: 5px; font-size: 16px; cursor: pointer;">
+                                ✕ Close
+                            </button>
+                        </div>
+                    `;
+                    
+                    document.body.appendChild(modal);
+                    showMessage('PDF generation complete! Please use the download options in the popup.', 'success');
+                    
+                } catch (error) {
+                    console.error('PDF generation failed:', error);
+                    showMessage('PDF generation failed: ' + error.message, 'error');
                 }
                 
             } catch (error) {
@@ -2937,117 +2894,105 @@
                     }
                 }
                 
-                // Method 6: Enhanced APK-compatible file download
+                // APK-compatible text file sharing with simplified approach
                 try {
                     const timestamp = new Date().toISOString().slice(0, 10);
                     const fileName = `${title.replace(/[^a-z0-9]/gi, '_')}_${timestamp}.txt`;
                     const shareText = `${title}\n\n${content}`;
                     
-                    // Detect APK environment
-                    const isAPK = window.location.protocol === 'file:' || 
-                                 window.AndroidInterface || 
-                                 typeof Android !== 'undefined' ||
-                                 navigator.userAgent.includes('wv');
+                    // Create data URI for text file
+                    const textDataUri = 'data:text/plain;charset=utf-8,' + encodeURIComponent(shareText);
                     
-                    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                    // Create full-screen modal for APK sharing
+                    const modal = document.createElement('div');
+                    modal.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0, 0, 0, 0.95);
+                        z-index: 999999;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: center;
+                        color: white;
+                        font-family: 'Comic Neue', Arial, sans-serif;
+                        text-align: center;
+                        padding: 20px;
+                        box-sizing: border-box;
+                    `;
                     
-                    // Try APK-specific sharing methods first
-                    if (isAPK) {
-                        // Method 6a: Try Android file save interface
-                        if (typeof Android !== 'undefined' && Android.saveTextFile) {
-                            try {
-                                Android.saveTextFile(shareText, fileName);
-                                showMessage('Report saved successfully! You can share it from your file manager', 'success');
-                                return;
-                            } catch (androidError) {
-                                console.log('Android file save failed:', androidError);
-                            }
-                        }
-                        
-                        // Method 6b: Create visible download button for APK
-                        const blob = new Blob([shareText], { type: 'text/plain' });
-                        const url = URL.createObjectURL(blob);
-                        
-                        const downloadButton = document.createElement('div');
-                        downloadButton.style.position = 'fixed';
-                        downloadButton.style.top = '50%';
-                        downloadButton.style.left = '50%';
-                        downloadButton.style.transform = 'translate(-50%, -50%)';
-                        downloadButton.style.zIndex = '999999';
-                        downloadButton.style.background = 'rgba(0, 0, 0, 0.9)';
-                        downloadButton.style.padding = '20px';
-                        downloadButton.style.borderRadius = '10px';
-                        downloadButton.style.textAlign = 'center';
-                        downloadButton.style.color = 'white';
-                        downloadButton.style.fontFamily = 'Arial, sans-serif';
-                        
-                        downloadButton.innerHTML = `
-                            <h3 style="margin: 0 0 15px 0; color: #00ff66;">Report Ready to Share</h3>
-                            <p style="margin: 0 0 15px 0;">Click the button below to download the report file:</p>
-                            <a href="${url}" download="${fileName}" 
-                               style="display: inline-block; padding: 15px 30px; background: #3498db; 
-                                      color: white; text-decoration: none; border-radius: 5px; font-size: 16px; margin: 0 10px;">
-                                Download Report File
-                            </a>
-                            <br><br>
-                            <button onclick="this.parentElement.remove()" 
-                                    style="background: #e74c3c; color: white; border: none; padding: 10px 20px; 
-                                           border-radius: 5px; cursor: pointer; font-size: 14px;">
-                                Close
+                    modal.innerHTML = `
+                        <div style="max-width: 400px; width: 100%;">
+                            <h2 style="color: #00ff66; margin-bottom: 20px;">📊 Report Ready to Share</h2>
+                            <p style="margin-bottom: 30px; line-height: 1.5;">Your text report "${fileName}" is ready for sharing.</p>
+                            
+                            <div style="margin-bottom: 30px;">
+                                <a href="${textDataUri}" download="${fileName}" 
+                                   style="display: block; width: 100%; padding: 15px; background: linear-gradient(135deg, #27ae60, #229954); 
+                                          color: white; text-decoration: none; border-radius: 8px; font-size: 18px; font-weight: bold; 
+                                          margin-bottom: 15px; box-sizing: border-box;">
+                                    📱 Download Report File
+                                </a>
+                                
+                                <button onclick="
+                                    navigator.clipboard.writeText(\`${shareText.replace(/`/g, '\\`')}\`).then(() => {
+                                        alert('Report text copied to clipboard! You can paste it into any messaging app to share.');
+                                    }).catch(() => {
+                                        const textarea = document.createElement('textarea');
+                                        textarea.value = \`${shareText.replace(/`/g, '\\`')}\`;
+                                        document.body.appendChild(textarea);
+                                        textarea.select();
+                                        document.execCommand('copy');
+                                        document.body.removeChild(textarea);
+                                        alert('Report text copied to clipboard! You can paste it into any messaging app to share.');
+                                    });
+                                " style="width: 100%; padding: 12px; background: #8e44ad; color: white; border: none; 
+                                         border-radius: 5px; font-size: 14px; cursor: pointer; margin-bottom: 15px;">
+                                    📋 Copy Report Text
+                                </button>
+                                
+                                <button onclick="
+                                    try {
+                                        const newTab = window.open();
+                                        newTab.document.write('<html><head><title>Text Report</title></head><body style=\\'text-align:center; padding:50px; font-family:Arial;\\'>');
+                                        newTab.document.write('<h2>Text Report Download</h2>');
+                                        newTab.document.write('<p>Right-click the link below and select \\'Save As\\' to download:</p>');
+                                        newTab.document.write('<a href=\\'${textDataUri}\\' download=\\'${fileName}\\' style=\\'padding:15px 30px; background:#27ae60; color:white; text-decoration:none; border-radius:5px; font-size:16px;\\'>Download ${fileName}</a>');
+                                        newTab.document.write('<br><br><h3>Report Content:</h3><pre style=\\'text-align:left; background:#f5f5f5; padding:20px; border-radius:5px; color:#333;\\'>');
+                                        newTab.document.write(\`${shareText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}\`);
+                                        newTab.document.write('</pre></body></html>');
+                                        newTab.document.close();
+                                        this.parentElement.parentElement.parentElement.remove();
+                                    } catch(e) {
+                                        alert('Unable to open new window. Please use the download button above.');
+                                    }
+                                " style="width: 100%; padding: 12px; background: #2c3e50; color: white; border: none; 
+                                         border-radius: 5px; font-size: 14px; cursor: pointer; margin-bottom: 20px;">
+                                    🌐 Open in New Window
+                                </button>
+                            </div>
+                            
+                            <p style="font-size: 12px; color: #bdc3c7; margin-bottom: 20px;">
+                                Choose any option above to download or copy the report for sharing via your preferred app.
+                            </p>
+                            
+                            <button onclick="this.parentElement.parentElement.remove()" 
+                                    style="padding: 12px 30px; background: #e74c3c; color: white; border: none; 
+                                           border-radius: 5px; font-size: 16px; cursor: pointer;">
+                                ✕ Close
                             </button>
-                            <br><br>
-                            <small style="color: #ccc;">After downloading, you can share the file using any app on your device</small>
-                        `;
-                        
-                        document.body.appendChild(downloadButton);
-                        
-                        // Auto-remove after 60 seconds
-                        setTimeout(() => {
-                            if (document.body.contains(downloadButton)) {
-                                document.body.removeChild(downloadButton);
-                                URL.revokeObjectURL(url);
-                            }
-                        }, 60000);
-                        
-                        showMessage('Report download ready! Please use the download button that appeared.', 'info');
-                        return;
-                        
-                    } else if (isMobile) {
-                        // Regular mobile download
-                        const blob = new Blob([shareText], { type: 'text/plain' });
-                        const url = URL.createObjectURL(blob);
-                        const downloadLink = document.createElement('a');
-                        downloadLink.href = url;
-                        downloadLink.download = fileName;
-                        downloadLink.style.display = 'none';
-                        document.body.appendChild(downloadLink);
-                        
-                        downloadLink.click();
-                        
-                        setTimeout(() => {
-                            document.body.removeChild(downloadLink);
-                            URL.revokeObjectURL(url);
-                        }, 100);
-                        
-                        showMessage('Report downloaded successfully! Check your Downloads folder to share the file', 'success');
-                        return;
-                        
-                    } else {
-                        // Desktop fallback
-                        const blob = new Blob([shareText], { type: 'text/plain' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = fileName;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(url);
-                        showMessage('Report downloaded - you can share the file from your downloads', 'success');
-                        return;
-                    }
+                        </div>
+                    `;
+                    
+                    document.body.appendChild(modal);
+                    showMessage('Report ready for sharing! Please use the options in the popup.', 'success');
+                    
                 } catch (error) {
-                    console.log('Download method failed:', error);
+                    console.log('Share method failed:', error);
+                    showMessage('Share preparation failed: ' + error.message, 'error');
                 }
                 
                 // Method 7: Enhanced fallback with better mobile handling
@@ -3274,6 +3219,39 @@
                 await window.permissionManager.initialize();
             });
         }
+
+        // APK/Environment detection and logging for debugging
+        function detectEnvironment() {
+            const environment = {
+                isAPK: window.location.protocol === 'file:' || 
+                       window.AndroidInterface || 
+                       typeof Android !== 'undefined' ||
+                       navigator.userAgent.includes('wv'),
+                isWebView: navigator.userAgent.includes('wv'),
+                hasAndroidInterface: typeof Android !== 'undefined',
+                hasWebViewBridge: !!window.AndroidInterface,
+                isCordova: typeof cordova !== 'undefined',
+                isMobile: /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
+                userAgent: navigator.userAgent,
+                protocol: window.location.protocol
+            };
+            
+            console.log('🔍 Environment Detection Results:', environment);
+            
+            // Store environment globally for use in share/PDF functions
+            window.appEnvironment = environment;
+            
+            if (environment.isAPK) {
+                console.log('📱 APK environment detected - Share and PDF will use mobile-optimized methods');
+            }
+            
+            return environment;
+        }
+
+        // Run environment detection on load
+        window.addEventListener('load', function() {
+            detectEnvironment();
+        });
     </script>
 </body>
 </html>
