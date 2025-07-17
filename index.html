@@ -1296,10 +1296,16 @@
                     const maxSerial = Math.max(...githubOutData.map(row => parseInt(row['SERIAL NO']) || 0));
                     serialCounter = maxSerial + 1;
                     console.log('Serial counter set from GitHub data:', serialCounter);
+                } else {
+                    // If no existing data, ensure serial counter starts from 1
+                    serialCounter = 1;
+                    console.log('No existing OUT data found, serial counter set to 1');
                 }
                 
             } catch (error) {
                 console.log('Could not load OUT data for serial counter:', error);
+                // If there's an error loading data, ensure serial counter starts from 1
+                serialCounter = 1;
             }
         }
 
@@ -1337,7 +1343,13 @@
                         if (outData.length > 0) {
                             const maxSerial = Math.max(...outData.map(row => parseInt(row['SERIAL NO']) || 0));
                             serialCounter = maxSerial + 1;
+                        } else {
+                            // If no existing data, ensure serial counter starts from 1
+                            serialCounter = 1;
                         }
+                    } else {
+                        // If no OUT sheet exists, ensure serial counter starts from 1
+                        serialCounter = 1;
                     }
                     
                     loadedFileName = file.name;
@@ -1828,7 +1840,7 @@
                     vehicleOutData.forEach((row, index) => {
                         const bgColor = index % 2 === 0 ? '#f9f9f9' : '#ffffff';
                         content += `<tr style="background-color: ${bgColor};">
-                            <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${row['SERIAL NO'] || index + 1}</td>
+                            <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${index + 1}</td>
                             <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${row['DATE & TIME'] || ''}</td>
                             <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${row['TRANSPORTER'] || ''}</td>
                             <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${row['VEHICLE NO'] || ''}</td>
@@ -2069,7 +2081,7 @@
                 reportData.forEach((row, index) => {
                     const bgColor = index % 2 === 0 ? '#f9f9f9' : '#ffffff';
                     content += `<tr style="background-color: ${bgColor};">
-                        <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${row['SERIAL NO'] || ''}</td>
+                        <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${index + 1}</td>
                         <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${row['DATE & TIME'] || ''}</td>
                         <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${row['TRANSPORTER'] || ''}</td>
                         <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${row['VEHICLE NO'] || ''}</td>
@@ -2186,7 +2198,7 @@
                 vehicleOutData.forEach((row, index) => {
                     const bgColor = index % 2 === 0 ? '#f9f9f9' : '#ffffff';
                     content += `<tr style="background-color: ${bgColor};">
-                        <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${row['SERIAL NO'] || index + 1}</td>
+                        <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${index + 1}</td>
                         <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${row['DATE & TIME'] || ''}</td>
                         <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${row['TRANSPORTER'] || ''}</td>
                         <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${row['VEHICLE NO'] || ''}</td>
