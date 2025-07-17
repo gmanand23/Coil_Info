@@ -2620,114 +2620,98 @@
                 const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
                 const filename = `${cleanTitle}_${timestamp}.pdf`;
                 
-                // APK-specific PDF handling with direct browser integration
+                // WebView APK-specific PDF handling for converted websites
                 try {
-                    // Generate PDF as binary data
-                    const pdfBlob = doc.output('blob');
-                    const pdfBytes = doc.output('arraybuffer');
+                    console.log('Starting PDF generation for WebView APK...');
                     
-                    // Try multiple APK-compatible methods
+                    // Generate PDF as base64 data
+                    const pdfDataUrl = doc.output('datauristring');
+                    console.log('PDF generated, size:', pdfDataUrl.length);
                     
-                    // Method 1: Direct browser navigation for APK
-                    try {
-                        const pdfDataUrl = doc.output('datauristring');
+                    // Create simple interface that works in all WebView environments
+                    const modal = document.createElement('div');
+                    modal.id = 'webviewPdfModal';
+                    modal.style.cssText = `
+                        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                        background: rgba(0,0,0,0.95); z-index: 999999;
+                        display: flex; flex-direction: column; justify-content: center; align-items: center;
+                        font-family: Arial, sans-serif; color: white; text-align: center;
+                        padding: 20px; box-sizing: border-box;
+                    `;
+                    
+                    modal.innerHTML = `
+                        <h2 style="color: #00ff66; margin: 0 0 30px 0;">PDF Report Ready</h2>
+                        <p style="margin: 0 0 30px 0; font-size: 16px;">File: ${filename}</p>
                         
-                        // Store PDF in localStorage for APK retrieval
-                        const storageKey = 'apk_pdf_' + Date.now();
-                        localStorage.setItem(storageKey, pdfDataUrl);
+                        <div style="display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 350px;">
+                            <button onclick="
+                                try {
+                                    window.location.assign('${pdfDataUrl}');
+                                } catch(e) {
+                                    alert('Method 1 failed: ' + e.message);
+                                }
+                            " style="padding: 15px; background: #3498db; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+                                Method 1: Open PDF
+                            </button>
+                            
+                            <button onclick="
+                                try {
+                                    const iframe = document.createElement('iframe');
+                                    iframe.src = '${pdfDataUrl}';
+                                    iframe.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; border:none; z-index:1000000;';
+                                    document.body.appendChild(iframe);
+                                    setTimeout(() => document.body.removeChild(iframe), 10000);
+                                } catch(e) {
+                                    alert('Method 2 failed: ' + e.message);
+                                }
+                            " style="padding: 15px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+                                Method 2: View in Frame
+                            </button>
+                            
+                            <button onclick="
+                                try {
+                                    const popupContent = '<!DOCTYPE html><html><head><title>PDF Download</title></head><body style=&quot;margin:0; text-align:center; background:#333; color:white; font-family:Arial;&quot;><h2>PDF Ready</h2><p>Long-press the link below and select Save/Download:</p><a href=&quot;${pdfDataUrl}&quot; download=&quot;${filename}&quot; style=&quot;color:#3498db; font-size:18px;&quot;>Download ${filename}</a></body></html>';
+                                    const popup = window.open('', '_blank');
+                                    popup.document.write(popupContent);
+                                    popup.document.close();
+                                } catch(e) {
+                                    alert('Method 3 failed: ' + e.message);
+                                }
+                            " style="padding: 15px; background: #9b59b6; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+                                Method 3: Popup Download
+                            </button>
+                            
+                            <button onclick="
+                                const textarea = document.createElement('textarea');
+                                textarea.value = '${pdfDataUrl}';
+                                textarea.style.cssText = 'position:fixed; top:-1000px; left:-1000px;';
+                                document.body.appendChild(textarea);
+                                textarea.select();
+                                document.execCommand('copy');
+                                document.body.removeChild(textarea);
+                                alert('PDF data copied to clipboard! Open your browser and paste the URL to download the PDF file.');
+                            " style="padding: 15px; background: #e74c3c; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+                                Method 4: Copy PDF Data
+                            </button>
+                        </div>
                         
-                        // Create APK-optimized interface
-                        document.body.innerHTML += `
-                            <div id="apkPdfModal" style="
-                                position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                                background: #000; z-index: 999999; display: flex; flex-direction: column;
-                                justify-content: center; align-items: center; color: white; 
-                                font-family: Arial, sans-serif; text-align: center; padding: 20px;">
-                                
-                                <h2 style="color: #00ff66; margin-bottom: 30px;">PDF Ready for Download</h2>
-                                
-                                <div style="margin-bottom: 30px;">
-                                    <button onclick="window.location.href='${pdfDataUrl}'" 
-                                            style="display: block; width: 300px; padding: 20px; 
-                                                   background: #3498db; color: white; border: none; 
-                                                   border-radius: 10px; font-size: 18px; font-weight: bold; 
-                                                   margin: 15px auto; cursor: pointer;">
-                                        📱 Open PDF (Method 1)
-                                    </button>
-                                    
-                                    <button onclick="
-                                        const link = document.createElement('a');
-                                        link.href = '${pdfDataUrl}';
-                                        link.download = '${filename}';
-                                        link.target = '_blank';
-                                        document.body.appendChild(link);
-                                        link.click();
-                                        document.body.removeChild(link);
-                                    " style="display: block; width: 300px; padding: 20px; 
-                                             background: #27ae60; color: white; border: none; 
-                                             border-radius: 10px; font-size: 18px; font-weight: bold; 
-                                             margin: 15px auto; cursor: pointer;">
-                                        📥 Download PDF (Method 2)
-                                    </button>
-                                    
-                                    <button onclick="
-                                        window.open('${pdfDataUrl}', '_blank');
-                                    " style="display: block; width: 300px; padding: 20px; 
-                                             background: #9b59b6; color: white; border: none; 
-                                             border-radius: 10px; font-size: 18px; font-weight: bold; 
-                                             margin: 15px auto; cursor: pointer;">
-                                        🌐 Open in New Tab (Method 3)
-                                    </button>
-                                    
-                                    <button onclick="
-                                        const textarea = document.createElement('textarea');
-                                        textarea.value = '${pdfDataUrl}';
-                                        document.body.appendChild(textarea);
-                                        textarea.select();
-                                        document.execCommand('copy');
-                                        document.body.removeChild(textarea);
-                                        alert('PDF data URL copied! Paste it in your browser to download the PDF.');
-                                    " style="display: block; width: 300px; padding: 20px; 
-                                             background: #f39c12; color: white; border: none; 
-                                             border-radius: 10px; font-size: 18px; font-weight: bold; 
-                                             margin: 15px auto; cursor: pointer;">
-                                        📋 Copy PDF URL (Method 4)
-                                    </button>
-                                </div>
-                                
-                                <p style="color: #bdc3c7; margin-bottom: 20px; font-size: 14px;">
-                                    Try each method until one works in your APK app. Method 4 copies the PDF data which you can paste in any browser.
-                                </p>
-                                
-                                <button onclick="
-                                    document.getElementById('apkPdfModal').remove();
-                                    localStorage.removeItem('${storageKey}');
-                                " style="padding: 15px 30px; background: #e74c3c; color: white; 
-                                         border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
-                                    ✕ Close
-                                </button>
-                            </div>
-                        `;
+                        <p style="margin: 30px 0 20px 0; font-size: 12px; color: #bdc3c7; line-height: 1.4;">
+                            Try each method. Method 4 copies the PDF data - paste it in any browser to download.
+                        </p>
                         
-                        showMessage('PDF generated! Multiple download methods available in the modal.', 'success');
-                        
-                    } catch (error) {
-                        console.error('APK PDF method failed:', error);
-                        
-                        // Fallback: Basic blob download
-                        const url = URL.createObjectURL(pdfBlob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = filename;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                        
-                        showMessage('PDF download started (fallback method)', 'info');
-                    }
+                        <button onclick="document.getElementById('webviewPdfModal').remove()" 
+                                style="padding: 12px 30px; background: #7f8c8d; color: white; border: none; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                            Close
+                        </button>
+                    `;
+                    
+                    document.body.appendChild(modal);
+                    console.log('PDF modal created for WebView APK');
+                    showMessage('PDF ready! Try the methods in the popup.', 'success');
                     
                 } catch (error) {
-                    console.error('All PDF methods failed:', error);
-                    showMessage('PDF generation failed: ' + error.message, 'error');
+                    console.error('PDF generation failed:', error);
+                    alert('PDF generation failed: ' + error.message);
                 }
                 
             } catch (error) {
@@ -2908,97 +2892,100 @@
                     }
                 }
                 
-                // APK-specific text sharing with direct browser methods
+                // WebView APK-specific text sharing for converted websites
                 try {
+                    console.log('Starting text sharing for WebView APK...');
+                    
                     const timestamp = new Date().toISOString().slice(0, 10);
                     const fileName = `${title.replace(/[^a-z0-9]/gi, '_')}_${timestamp}.txt`;
                     const shareText = `${title}\n\n${content}`;
-                    
-                    // Create data URI for text file
                     const textDataUri = 'data:text/plain;charset=utf-8,' + encodeURIComponent(shareText);
                     
-                    // Store text in localStorage for APK retrieval
-                    const storageKey = 'apk_text_' + Date.now();
-                    localStorage.setItem(storageKey, shareText);
+                    console.log('Text data prepared, length:', shareText.length);
                     
-                    // Create APK-optimized interface  
-                    document.body.innerHTML += `
-                        <div id="apkTextModal" style="
-                            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                            background: #000; z-index: 999999; display: flex; flex-direction: column;
-                            justify-content: center; align-items: center; color: white; 
-                            font-family: Arial, sans-serif; text-align: center; padding: 20px;">
-                            
-                            <h2 style="color: #00ff66; margin-bottom: 30px;">Report Ready to Share</h2>
-                            
-                            <div style="margin-bottom: 30px;">
-                                <button onclick="window.location.href='${textDataUri}'" 
-                                        style="display: block; width: 300px; padding: 20px; 
-                                               background: #27ae60; color: white; border: none; 
-                                               border-radius: 10px; font-size: 18px; font-weight: bold; 
-                                               margin: 15px auto; cursor: pointer;">
-                                    📱 Open Text File (Method 1)
-                                </button>
-                                
-                                <button onclick="
-                                    const link = document.createElement('a');
-                                    link.href = '${textDataUri}';
-                                    link.download = '${fileName}';
-                                    link.target = '_blank';
-                                    document.body.appendChild(link);
-                                    link.click();
-                                    document.body.removeChild(link);
-                                " style="display: block; width: 300px; padding: 20px; 
-                                         background: #3498db; color: white; border: none; 
-                                         border-radius: 10px; font-size: 18px; font-weight: bold; 
-                                         margin: 15px auto; cursor: pointer;">
-                                    📥 Download Text (Method 2)
-                                </button>
-                                
-                                <button onclick="
-                                    const textarea = document.createElement('textarea');
-                                    textarea.value = \`${shareText.replace(/`/g, '\\`').replace(/\n/g, '\\n')}\`;
-                                    document.body.appendChild(textarea);
-                                    textarea.select();
-                                    document.execCommand('copy');
-                                    document.body.removeChild(textarea);
-                                    alert('Report text copied to clipboard! You can paste it into WhatsApp, email, or any other app to share.');
-                                " style="display: block; width: 300px; padding: 20px; 
-                                         background: #e74c3c; color: white; border: none; 
-                                         border-radius: 10px; font-size: 18px; font-weight: bold; 
-                                         margin: 15px auto; cursor: pointer;">
-                                    📋 Copy Text (Method 3)
-                                </button>
-                                
-                                <button onclick="
-                                    window.open('${textDataUri}', '_blank');
-                                " style="display: block; width: 300px; padding: 20px; 
-                                         background: #9b59b6; color: white; border: none; 
-                                         border-radius: 10px; font-size: 18px; font-weight: bold; 
-                                         margin: 15px auto; cursor: pointer;">
-                                    🌐 Open in New Tab (Method 4)
-                                </button>
-                            </div>
-                            
-                            <p style="color: #bdc3c7; margin-bottom: 20px; font-size: 14px;">
-                                Try each method until one works. Method 3 copies the text so you can paste it into any messaging app.
-                            </p>
-                            
-                            <button onclick="
-                                document.getElementById('apkTextModal').remove();
-                                localStorage.removeItem('${storageKey}');
-                            " style="padding: 15px 30px; background: #95a5a6; color: white; 
-                                     border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
-                                ✕ Close
-                            </button>
-                        </div>
+                    // Create simple interface that works in all WebView environments
+                    const modal = document.createElement('div');
+                    modal.id = 'webviewTextModal';
+                    modal.style.cssText = `
+                        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                        background: rgba(0,0,0,0.95); z-index: 999999;
+                        display: flex; flex-direction: column; justify-content: center; align-items: center;
+                        font-family: Arial, sans-serif; color: white; text-align: center;
+                        padding: 20px; box-sizing: border-box;
                     `;
                     
-                    showMessage('Report ready! Multiple sharing methods available in the modal.', 'success');
+                    modal.innerHTML = `
+                        <h2 style="color: #00ff66; margin: 0 0 30px 0;">Report Ready to Share</h2>
+                        <p style="margin: 0 0 30px 0; font-size: 16px;">File: ${fileName}</p>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 350px;">
+                            <button onclick="
+                                try {
+                                    window.location.assign('${textDataUri}');
+                                } catch(e) {
+                                    alert('Method 1 failed: ' + e.message);
+                                }
+                            " style="padding: 15px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+                                Method 1: Open Text File
+                            </button>
+                            
+                            <button onclick="
+                                try {
+                                    const popup = window.open('', '_blank');
+                                    popup.document.write('<!DOCTYPE html><html><head><title>Text Report</title></head><body style=&quot;margin:20px; font-family:Arial; background:#f5f5f5;&quot;><h2>Report Content</h2><pre style=&quot;white-space:pre-wrap; background:white; padding:20px; border-radius:5px;&quot;>' + \`${shareText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}\` + '</pre><p><a href=&quot;${textDataUri}&quot; download=&quot;${fileName}&quot; style=&quot;color:#3498db;&quot;>Download as file</a></p></body></html>');
+                                    popup.document.close();
+                                } catch(e) {
+                                    alert('Method 2 failed: ' + e.message);
+                                }
+                            " style="padding: 15px; background: #3498db; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+                                Method 2: View in Popup
+                            </button>
+                            
+                            <button onclick="
+                                const textarea = document.createElement('textarea');
+                                textarea.value = \`${shareText.replace(/`/g, '\\`')}\`;
+                                textarea.style.cssText = 'position:fixed; top:-1000px; left:-1000px;';
+                                document.body.appendChild(textarea);
+                                textarea.select();
+                                document.execCommand('copy');
+                                document.body.removeChild(textarea);
+                                alert('Report text copied to clipboard! You can now paste it into WhatsApp, email, or any messaging app to share.');
+                            " style="padding: 15px; background: #e74c3c; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+                                Method 3: Copy Text to Share
+                            </button>
+                            
+                            <button onclick="
+                                try {
+                                    const iframe = document.createElement('iframe');
+                                    iframe.src = '${textDataUri}';
+                                    iframe.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; border:none; z-index:1000000; background:white;';
+                                    document.body.appendChild(iframe);
+                                    setTimeout(() => document.body.removeChild(iframe), 15000);
+                                } catch(e) {
+                                    alert('Method 4 failed: ' + e.message);
+                                }
+                            " style="padding: 15px; background: #9b59b6; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+                                Method 4: View in Frame
+                            </button>
+                        </div>
+                        
+                        <p style="margin: 30px 0 20px 0; font-size: 12px; color: #bdc3c7; line-height: 1.4;">
+                            Try each method. Method 3 copies text to clipboard for easy sharing in any app.
+                        </p>
+                        
+                        <button onclick="document.getElementById('webviewTextModal').remove()" 
+                                style="padding: 12px 30px; background: #7f8c8d; color: white; border: none; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                            Close
+                        </button>
+                    `;
+                    
+                    document.body.appendChild(modal);
+                    console.log('Text sharing modal created for WebView APK');
+                    showMessage('Report ready! Try the methods in the popup.', 'success');
                     
                 } catch (error) {
-                    console.log('Share method failed:', error);
-                    showMessage('Share preparation failed: ' + error.message, 'error');
+                    console.error('Text sharing failed:', error);
+                    alert('Text sharing failed: ' + error.message);
                 }
                 
                 // Method 7: Enhanced fallback with better mobile handling
