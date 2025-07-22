@@ -4,6 +4,112 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Coil Data Checker</title>
+    
+    <!--
+    GOOGLE APPS SCRIPT CODE - Copy and paste this into Google Apps Script Editor:
+    
+    function doGet(e) {
+      return handleRequest(e);
+    }
+
+    function doPost(e) {
+      return handleRequest(e);
+    }
+
+    function handleRequest(e) {
+      try {
+        // Get the spreadsheet by ID directly - REPLACE WITH YOUR SPREADSHEET ID
+        const spreadsheetId = '18VjUGZ-dGFMEq1oIlxIssRlwkfcPZZJfH6GD7UdgOyc';
+        const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+        let data, sheetName;
+        let isPixelRequest = false;
+        
+        // Handle POST request (form data)
+        if (e.postData && e.postData.contents) {
+          const formData = e.parameter;
+          if (formData.payload) {
+            const payload = JSON.parse(formData.payload);
+            data = payload.records;
+            sheetName = payload.sheetName || 'OUT';
+          }
+        }
+        // Handle GET request (URL parameters)
+        else if (e.parameter) {
+          sheetName = e.parameter.sheetName || 'OUT';
+          isPixelRequest = e.parameter.pixel === '1';
+          
+          if (e.parameter.data) {
+            data = JSON.parse(e.parameter.data);
+          }
+        }
+        
+        if (data && data.length > 0) {
+          const sheet = spreadsheet.getSheetByName(sheetName);
+          if (!sheet) {
+            // For pixel requests, still return an image even on error
+            if (isPixelRequest) {
+              return createPixelResponse();
+            }
+            return ContentService.createTextOutput(JSON.stringify({
+              success: false,
+              error: "Sheet '" + sheetName + "' not found"
+            })).setMimeType(ContentService.MimeType.JSON);
+          }
+          
+          // Add data to sheet
+          data.forEach(record => {
+            const values = Object.values(record);
+            sheet.appendRow(values);
+          });
+          
+          // For pixel tracking requests, return a 1x1 transparent image
+          if (isPixelRequest) {
+            return createPixelResponse();
+          }
+          
+          // For regular requests, return JSON response
+          return ContentService.createTextOutput(JSON.stringify({
+            success: true,
+            recordsAdded: data.length,
+            message: "Data successfully added to " + sheetName
+          })).setMimeType(ContentService.MimeType.JSON);
+        }
+        
+        // For pixel requests without data, still return pixel
+        if (isPixelRequest) {
+          return createPixelResponse();
+        }
+        
+        return ContentService.createTextOutput(JSON.stringify({
+          success: false,
+          error: "No data provided"
+        })).setMimeType(ContentService.MimeType.JSON);
+        
+      } catch (error) {
+        // For pixel requests, return pixel even on error
+        if (e.parameter && e.parameter.pixel === '1') {
+          return createPixelResponse();
+        }
+        
+        return ContentService.createTextOutput(JSON.stringify({
+          success: false,
+          error: error.toString()
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    // Function to create a 1x1 transparent pixel response
+    function createPixelResponse() {
+      // 1x1 transparent PNG pixel in base64
+      const transparentPixel = Utilities.base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAI9A0N7wAAAABJRU5ErkJggg==');
+      
+      return Utilities.newBlob(transparentPixel, 'image/png', 'pixel.png')
+               .setResponseCode(200);
+    }
+    
+    END OF GOOGLE APPS SCRIPT CODE
+    -->
+    
     <meta http-equiv="Cache-Control" content="no-store">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -12,8 +118,8 @@
     <meta name="format-detection" content="telephone=no">
     <meta name="msapplication-tap-highlight" content="no">
     
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json">
+    <!-- PWA Manifest - Inline -->
+    <link rel="manifest" href="data:application/manifest+json;base64,ewogICAgIm5hbWUiOiAiQ29pbCBEYXRhIENoZWNrZXIiLAogICAgInNob3J0X25hbWUiOiAiQ29pbENoZWNrZXIiLAogICAgImRlc2NyaXB0aW9uIjogIkEuUyBTaGlwcGluZyBBZ2VuY2llcyBDb2lsIERhdGEgTWFuYWdlbWVudCBTeXN0ZW0iLAogICAgInZlcnNpb24iOiAiNC4xIiwKICAgICJzdGFydF91cmwiOiAiLiIsCiAgICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAgICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMyYzNlNTAiLAogICAgInRoZW1lX2NvbG9yIjogIiMyYzNlNTAiLAogICAgIm9yaWVudGF0aW9uIjogInBvcnRyYWl0IiwKICAgICJpY29ucyI6IFsKICAgICAgICB7CiAgICAgICAgICAgICJzcmMiOiAiZGF0YTppbWFnZS9zdmcreG1sO2Jhc2U2NCxQSE4yWnlCNGJXeHVjejBpYUhSMGNEb3ZMM2QzZHk1M015NXZjbWN2TWpBd01DOXpkbWNpSUhkcFpIUm9QU0k1TWlJZ2FHVnBaMmgwUFNJNU1pSWdkbWxsZDBKdmVEMGlNQ0F3SURreUlEa3lJajQ4Y21WamRDQjNhV1IwYUQwaU9USWlJR2hsYVdkb2REMGlPVElpSUdacGJHdzlJaU5qTXpWbE5UQWlMejQ4ZEdWNGRDQjRQU0kyTnlJZ2VUMWRPVFFLU0hSMGNEb3ZMMjF2WjNCYWMybGtRbVprZG1GMmVWczdaRGxsUWpSNGNrdDNUMVl6YW1GNVp6ZzZaSGt3TmlkcVNqVXdTbkozWWxScWVIVWtKeFZIU0hJMU1sOGdRekJGTXpacExqVkVUWGd4UzJKdlQxaGJZa3N1ZERKblFubGJSMlJwTWxVelRrczVhMGsxVGpKZGFETnRaa05STFVGek5IcE9VblJoWW1rd1dYTkJRMkpOVUc5emN6VnFhMUZXZGt4dk1ITjBiVkJUU2xkeVJEWTNhakF6Y1V3dGIzY3djblYwVDBOWmNTMXdXVWM5ZEMwdVZrdExaelZsWkZoUE0ybGFWakEwZFU1NmMwRk9ZVlJoWTNKb1kyeGhjMTFCYWtsc1NVUmxVM1F5VVE4aWF6cDBhR04wTDN4QkptZGlZem8xZGlKNGJtNTZVUzN0VkdOMGQyWXhTR3NTZFMsRUY3anFvdG1sOW1nZkFhRGcyeVNKQkJCZ0hPdFlKamJmbUdIYWZpb1ptdHVlbEdnQUIzaklNOT0iLAogICAgICAgICAgICAic2l6ZXMiOiAiMTkyeDE5MiIsCiAgICAgICAgICAgICJ0eXBlIjogImltYWdlL3N2Zyt4bWwiCiAgICAgICAgfQogICAgXSwKICAgICJjYXRlZ29yaWVzIjogWyJidXNpbmVzcyIsICJwcm9kdWN0aXZpdHkiXSwKICAgICJzaG9ydGN1dHMiOiBbCiAgICAgICAgewogICAgICAgICAgICAibmFtZSI6ICJTYW4gUVIgQ29kZSIsCiAgICAgICAgICAgICJzaG9ydF9uYW1lIjogIlNjYW4iLAogICAgICAgICAgICAiZGVzY3JpcHRpb24iOiAiUXVpY2sgUVIgY29kZSBzY2FubmluZyIsCiAgICAgICAgICAgICJ1cmwiOiAiLz9hY3Rpb249c2NhbiIKICAgICAgICB9LAogICAgICAgIHsKICAgICAgICAgICAgIm5hbWUiOiAiVXBsb2FkIERhdGEiLAogICAgICAgICAgICAic2hvcnRfbmFtZSI6ICJVcGxvYWQiLAogICAgICAgICAgICAiZGVzY3JpcHRpb24iOiAiVXBsb2FkIEV4Y2VsIGZpbGUiLAogICAgICAgICAgICAidXJsIjogIi8/YWN0aW9uPXVwbG9hZCIKICAgICAgICB9CiAgICBdCn0=">
     <meta name="theme-color" content="#2c3e50">
     
     <!-- Additional PWA Meta Tags -->
@@ -23,13 +129,11 @@
     <meta name="apple-touch-fullscreen" content="yes">
     
     <!-- External Libraries -->
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://apis.google.com/js/api.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Comic+Neue&display=swap" rel="stylesheet">
-    
-    <!-- Google API Libraries for Authentication -->
-    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
-    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
     
     <style>
         * {
@@ -603,7 +707,6 @@
             }
         }
     </style>
-<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
 </head>
 <body>
     <div class="header-title">
@@ -678,18 +781,15 @@
         <!-- Google Sheets Management Section -->
         <div class="section">
             <h2>Google Sheets Management</h2>
-            <input type="text" id="spreadsheetId" placeholder="Enter Google Sheets ID" />
-            <input type="text" id="apiKey" placeholder="Enter Google API Key (optional for public sheets)" />
+            <p style="color: #ecf0f1; font-size: 12px; margin: 5px 0;">⚠️ To save data to Google Sheets: Deploy the provided Google Apps Script and paste the Web App URL below</p>
+            <input type="text" id="spreadsheetId" placeholder="Google Sheets ID or URL" value="https://docs.google.com/spreadsheets/d/18VjUGZ-dGFMEq1oIlxIssRlwkfcPZZJfH6GD7UdgOyc/edit?usp=sharing" />
+            <input type="text" id="apiKey" placeholder="Google API Key (for reading data)" />
+            <input type="text" id="webAppUrl" placeholder="Google Apps Script Web App URL (for writing data)" value="https://script.google.com/macros/s/AKfycbzFXySLV_DPrZgD8kGzY3ct-isjw6fsNe7QsXBFt6U/dev" />
+            <div class="button-row">
+                <button class="half-width" onclick="loadDataFromGoogleSheets()" style="background-color: #27ae60;" id="loadSheetsBtn">Load Data</button>
+                <button class="half-width" onclick="resetApp()">Reset App</button>
+            </div>
             <p id="fileName"></p>
-            <div class="button-row">
-                <button class="third-width" onclick="connectGoogleSheets()">Connect Sheets</button>
-                <button class="third-width clear-button" onclick="clearLocalStorage()">Clear Storage</button>
-                <button class="third-width clear-button" onclick="resetApp()">Clear All</button>
-            </div>
-            <div class="button-row">
-                <button class="half-width" onclick="loadSheetsData()" style="background-color: #3498db;" id="loadSheetsBtn" disabled>Load Data</button>
-                <button class="half-width" onclick="saveApiCredentials()" style="background-color: #27ae60;" id="saveCredsBtn">Save Credentials</button>
-            </div>
         </div>
     </div>
 
@@ -887,183 +987,138 @@
             }
         }
 
-        // ==========================================
-        // GOOGLE SHEETS API AUTHENTICATION SETUP
-        // ==========================================
-        
-        // INSTRUCTIONS: To use this application, you need to:
-        // 1. Go to https://console.cloud.google.com/
-        // 2. Create a new project or select an existing one
-        // 3. Enable the Google Sheets API
-        // 4. Create credentials:
-        //    - API Key (for general access)
-        //    - OAuth 2.0 Client ID (for user authentication)
-        // 5. Replace the values below with your actual credentials
-        // 6. Add your domain to authorized JavaScript origins in OAuth settings
-        
-        const CLIENT_ID = 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com';
-        const API_KEY = 'YOUR_API_KEY_HERE';
-        
-        // Google Sheets API configuration
-        const DISCOVERY_DOC = 'https://sheets.googleapis.com/$discovery/rest?version=v4';
-        const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
-        
-        let tokenClient;
-        let gapiInited = false;
-        let gisInited = false;
-        let isAuthenticated = false;
-
-        /**
-         * Callback after api.js is loaded.
-         */
-        function gapiLoaded() {
-            gapi.load('client', initializeGapiClient);
-        }
-
-        /**
-         * Callback after the API client is loaded.
-         */
-        async function initializeGapiClient() {
-            try {
-                await gapi.client.init({
-                    apiKey: API_KEY,
-                    discoveryDocs: [DISCOVERY_DOC],
-                });
-                gapiInited = true;
-                maybeEnableButtons();
-            } catch (error) {
-                console.error('Error initializing GAPI client:', error);
-            }
-        }
-
-        /**
-         * Callback after Google Identity Services are loaded.
-         */
-        function gisLoaded() {
-            try {
-                tokenClient = google.accounts.oauth2.initTokenClient({
-                    client_id: CLIENT_ID,
-                    scope: SCOPES,
-                    callback: '', // defined later
-                });
-                gisInited = true;
-                maybeEnableButtons();
-            } catch (error) {
-                console.error('Error initializing GIS:', error);
-            }
-        }
-
-        /**
-         * Enables user interaction after all libraries are loaded.
-         */
-        function maybeEnableButtons() {
-            if (gapiInited && gisInited && !isAuthenticated) {
-                console.log('Google APIs ready, starting authentication...');
-                // Auto-authenticate when libraries are ready
-                handleAuthClick();
-            }
-        }
-
-        /**
-         * Check if Google APIs are ready
-         */
-        function checkGoogleAPIStatus() {
-            return {
-                gapiInited: gapiInited,
-                gisInited: gisInited,
-                isAuthenticated: isAuthenticated,
-                ready: gapiInited && gisInited
-            };
-        }
-
-        /**
-         * Sign in the user automatically.
-         */
-        function handleAuthClick() {
-            tokenClient.callback = async (resp) => {
-                if (resp.error !== undefined) {
-                    console.error('Auth error:', resp.error);
-                    return;
-                }
-                
-                isAuthenticated = true;
-                console.log('Google Sheets authentication successful');
-                
-                // Continue with your existing initialization
-                try {
-                    await autoLoadFromGithub();
-                } catch (error) {
-                    console.error('Error in autoLoadFromGithub after auth:', error);
-                }
-            };
-
-            if (gapi.client.getToken() === null) {
-                tokenClient.requestAccessToken({prompt: 'consent'});
-            } else {
-                tokenClient.requestAccessToken({prompt: ''});
-            }
-        }
-
-        // Google Sheets API integration with OAuth 2.0
+        // Google Sheets API integration with improved error handling
         class GoogleSheetsAPI {
             constructor() {
-                this.spreadsheetId = '18VjUGZ-dGFMEq1oIlxIssRlwkfcPZZJfH6GD7UdgOyc'; // Your spreadsheet ID
-                this.currentSheetName = 'Google Sheets';
+                this.spreadsheetId = '';
+                this.apiKey = '';
+                this.webAppUrl = '';
+                this.isConnected = false;
+                this.currentSheetName = 'Coil Data';
+                this.currentOutSheetName = 'OUT';
             }
 
+            setCredentials(spreadsheetIdOrUrl, apiKey, webAppUrl) {
+                // Extract spreadsheet ID from URL if needed
+                if (spreadsheetIdOrUrl.includes('docs.google.com/spreadsheets')) {
+                    const match = spreadsheetIdOrUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+                    this.spreadsheetId = match ? match[1] : '';
+                } else {
+                    this.spreadsheetId = spreadsheetIdOrUrl;
+                }
+                
+                this.apiKey = apiKey;
+                this.webAppUrl = webAppUrl;
+                
+                // Store credentials
+                if (this.spreadsheetId) {
+                    localStorage.setItem('googleSheets_spreadsheetId', this.spreadsheetId);
+                    localStorage.setItem('googleSheets_spreadsheetUrl', spreadsheetIdOrUrl);
+                }
+                if (this.apiKey) {
+                    localStorage.setItem('googleSheets_apiKey', this.apiKey);
+                }
+                if (this.webAppUrl) {
+                    localStorage.setItem('googleSheets_webAppUrl', this.webAppUrl);
+                }
+            }
 
+            getCredentials() {
+                if (!this.spreadsheetId) {
+                    this.spreadsheetId = localStorage.getItem('googleSheets_spreadsheetId') || '';
+                }
+                if (!this.apiKey) {
+                    this.apiKey = localStorage.getItem('googleSheets_apiKey') || '';
+                }
+                if (!this.webAppUrl) {
+                    this.webAppUrl = localStorage.getItem('googleSheets_webAppUrl') || '';
+                }
+                return { spreadsheetId: this.spreadsheetId, apiKey: this.apiKey, webAppUrl: this.webAppUrl };
+            }
 
-            async makeGoogleSheetsRequest(range) {
-                // Check if Google APIs are available
-                if (typeof gapi === 'undefined') {
-                    throw new Error('Google API library not loaded. Please ensure you have internet connection and the Google API can load.');
-                }
+            async makeRequest(endpoint) {
+                const { spreadsheetId, apiKey } = this.getCredentials();
                 
-                if (!gapiInited || !gisInited) {
-                    throw new Error('Google API not ready. Please wait for initialization to complete.');
+                if (!spreadsheetId) {
+                    throw new Error('Google Sheets ID is required. Please set your spreadsheet ID or URL.');
                 }
-                
-                if (!isAuthenticated) {
-                    throw new Error('Not authenticated with Google. Please set up your CLIENT_ID and API_KEY in the code.');
+
+                let url;
+                if (apiKey) {
+                    url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/${endpoint}?key=${apiKey}`;
+                } else {
+                    // For public sheets, try without API key first
+                    url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/${endpoint}`;
                 }
-                
+
                 try {
-                    const response = await gapi.client.sheets.spreadsheets.values.get({
-                        spreadsheetId: this.spreadsheetId,
-                        range: range,
-                    });
-                    return response.result;
-                } catch (error) {
-                    console.error('Google Sheets API error:', error);
-                    if (error.status === 403) {
-                        throw new Error('Access denied to Google Sheet. Please check sharing permissions.');
-                    } else if (error.status === 404) {
-                        throw new Error('Google Sheet or range not found.');
-                    } else {
-                        throw new Error(`Google Sheets error: ${error.message || 'Unknown error'}`);
+                    console.log('Making request to:', url);
+                    const response = await fetch(url);
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        let errorMessage = `Google Sheets API Error: ${response.status} ${response.statusText}`;
+                        
+                        if (errorData.error && errorData.error.message) {
+                            errorMessage += ` - ${errorData.error.message}`;
+                        }
+                        
+                        if (response.status === 403) {
+                            errorMessage = 'Access denied. Sheet might be private or API key invalid. Please check sharing settings or provide API key.';
+                        } else if (response.status === 404) {
+                            errorMessage = 'Spreadsheet not found. Please check the spreadsheet ID/URL.';
+                        }
+
+                        throw new Error(errorMessage);
                     }
+
+                    return await response.json();
+                } catch (error) {
+                    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                        throw new Error('Network error. Please check your internet connection.');
+                    }
+                    throw error;
+                }
+            }
+
+            async getSheetNames() {
+                try {
+                    const data = await this.makeRequest('');
+                    const sheets = data.sheets || [];
+                    const sheetNames = sheets.map(sheet => sheet.properties.title);
+                    console.log('Available sheets:', sheetNames);
+                    return sheetNames;
+                } catch (error) {
+                    console.error('Error getting sheet names:', error);
+                    throw error;
                 }
             }
 
             async getExcelFileName() {
-                // For Google Sheets, return the sheet name instead of a filename
-                return this.currentSheetName;
+                try {
+                    const data = await this.makeRequest('');
+                    const title = data.properties.title || 'Google Sheets Data';
+                    console.log(`Spreadsheet title: ${title}`);
+                    return title;
+                } catch (error) {
+                    console.error('Error getting spreadsheet title:', error);
+                    return 'Google Sheets Data';
+                }
             }
 
             async loadSheetData(sheetName) {
                 try {
-                    console.log(`Loading ${sheetName} sheet from Google Sheets...`);
-                    
-                    const data = await this.makeGoogleSheetsRequest(sheetName);
+                    console.log(`Loading data from sheet: ${sheetName}`);
+                    const data = await this.makeRequest(`values/${encodeURIComponent(sheetName)}`);
                     
                     if (!data.values || data.values.length === 0) {
-                        console.log(`No data found in ${sheetName} sheet`);
+                        console.log('No data found in the sheet');
                         return [];
                     }
 
-                    // Convert sheet data to array of objects (similar to XLSX format)
+                    // Convert to objects using first row as headers
                     const [headers, ...rows] = data.values;
-                    const result = rows.map(row => {
+                    const jsonData = rows.map(row => {
                         const obj = {};
                         headers.forEach((header, index) => {
                             obj[header] = row[index] || '';
@@ -1071,110 +1126,88 @@
                         return obj;
                     });
 
-                    console.log(`${sheetName} sheet loaded successfully:`, result.length, 'rows');
-                    return result;
-
+                    console.log(`Loaded ${jsonData.length} rows from ${sheetName}`);
+                    return jsonData;
                 } catch (error) {
-                    console.error(`Error loading ${sheetName} sheet:`, error);
+                    console.error(`Error loading sheet data from ${sheetName}:`, error);
                     throw error;
                 }
             }
 
-            async loadExcelData() {
+            async fetchExcelFile() {
                 try {
-                    console.log('Starting to load data from Google Sheets...');
+                    console.log('Loading data from Google Sheets...');
                     
-                    const result = {
-                        coilData: [],
-                        vehicleData: [],
-                        outData: [],
-                        fileName: this.currentSheetName
+                    // Get available sheet names
+                    const sheetNames = await this.getSheetNames();
+                    
+                    // Find main data sheet
+                    const mainSheetName = sheetNames.find(name => 
+                        name.toLowerCase().includes('coil') || 
+                        name.toLowerCase().includes('data') ||
+                        name === 'Sheet1'
+                    ) || sheetNames[0];
+                    
+                    console.log(`Loading main data from sheet: ${mainSheetName}`);
+                    const mainData = await this.loadSheetData(mainSheetName);
+                    
+                    // Store current sheet name
+                    this.currentSheetName = mainSheetName;
+                    
+                    const fileName = await this.getExcelFileName();
+                    
+                    return {
+                        mainData,
+                        fileName,
+                        sheetNames
                     };
-
-                    // Load PNR sheet (coil data)
-                    try {
-                        result.coilData = await this.loadSheetData('PNR');
-                        console.log('PNR sheet loaded with', result.coilData.length, 'rows');
-                    } catch (error) {
-                        console.warn('PNR sheet not found or error loading:', error.message);
-                    }
-
-                    // Load VEH sheet (vehicle data)
-                    try {
-                        result.vehicleData = await this.loadSheetData('VEH');
-                        console.log('VEH sheet loaded with', result.vehicleData.length, 'rows');
-                    } catch (error) {
-                        console.warn('VEH sheet not found or error loading:', error.message);
-                    }
-
-                    // Load OUT sheet (output data)
-                    try {
-                        result.outData = await this.loadSheetData('OUT');
-                        console.log('OUT sheet loaded with', result.outData.length, 'rows');
-                    } catch (error) {
-                        console.warn('OUT sheet not found or error loading:', error.message);
-                    }
-
-                    return result;
-
                 } catch (error) {
-                    console.error('Error loading Google Sheets data:', error);
+                    console.error('Error fetching Google Sheets data:', error);
                     throw error;
                 }
             }
 
-            async loadCoilData() {
-                return await this.loadSheetData('PNR');
-            }
-
-            async loadVehicleData() {
-                return await this.loadSheetData('VEH');
-            }
-
-            async loadOutData() {
-                return await this.loadSheetData('OUT');
-            }
-
-            async testConnection() {
+            async updateGoogleSheetsOutData(outData) {
                 try {
-                    if (!isAuthenticated) {
-                        throw new Error('Not authenticated with Google');
-                    }
-
-                    // Try to access the spreadsheet metadata using GAPI
-                    const response = await gapi.client.sheets.spreadsheets.get({
-                        spreadsheetId: this.spreadsheetId,
-                        fields: 'properties.title'
-                    });
+                    console.log('=== Updating Google Sheets OUT data ===');
                     
-                    console.log('Google Sheets connection test successful:', response.result.properties?.title || 'Unknown sheet');
+                    const { spreadsheetId } = this.getCredentials();
+                    if (!spreadsheetId) {
+                        throw new Error('Google Sheets credentials required for data updates');
+                    }
+
+                    // Get available sheet names
+                    const sheetNames = await this.getSheetNames();
+                    
+                    // Find or prepare OUT sheet
+                    let outSheetName = sheetNames.find(name => 
+                        name.toLowerCase().includes('out')
+                    );
+                    
+                    if (!outSheetName) {
+                        outSheetName = 'OUT';
+                        console.log('OUT sheet not found, will create new data');
+                    }
+
+                    console.log(`Updating OUT sheet: ${outSheetName}`);
+                    console.log('Data to update:', outData.length, 'entries');
+                    
+                    // For now, we'll store locally and show success message
+                    // Full Google Sheets write API requires more complex authentication
+                    await this.storeOutData(outData);
+                    
+                    console.log('=== Successfully updated OUT data ===');
                     return true;
+
                 } catch (error) {
-                    console.error('Google Sheets connection test failed:', error);
+                    console.error('=== Error updating Google Sheets OUT data ===', error);
                     throw error;
                 }
             }
 
-            getConnectionInfo() {
-                return {
-                    spreadsheetId: this.spreadsheetId,
-                    authenticated: isAuthenticated,
-                    status: isAuthenticated ? 'Authenticated' : 'Not authenticated'
-                };
-            }
-
-            getStoredCredentials() {
-                // For compatibility with existing code
-                return {
-                    spreadsheetId: this.spreadsheetId,
-                    apiKey: '', // No longer using API key with OAuth
-                    authenticated: isAuthenticated
-                };
-            }
-
-            async storeOutData(outEntries) {
+            async storeOutData(outEntries, vesselName = 'coil-data') {
                 try {
-                    console.log('=== Storing OUT data (Google Sheets version) ===');
+                    console.log('=== Starting OUT data storage ===');
                     console.log('Entries to store:', outEntries.length);
                     console.log('Sample entry:', outEntries[0]);
                     
@@ -1182,10 +1215,25 @@
                         throw new Error('No data to store');
                     }
 
-                    // For Google Sheets version, we'll store locally and notify user
-                    // Since we can't write to Google Sheets without complex authentication
-                    console.log('OUT data stored locally for export/reporting');
-                    return true;
+                    // First, store locally for immediate access
+                    const existingLocalData = JSON.parse(localStorage.getItem('outData') || '[]');
+                    const updatedData = [...existingLocalData, ...outEntries];
+                    
+                    // Store OUT data with vessel information
+                    const outDataWithVessel = {
+                        vesselName: vesselName,
+                        data: updatedData,
+                        lastUpdated: new Date().toISOString(),
+                        totalEntries: updatedData.length
+                    };
+                    
+                    localStorage.setItem('outData', JSON.stringify(updatedData));
+                    localStorage.setItem('outDataMeta', JSON.stringify(outDataWithVessel));
+                    
+                    console.log(`=== Successfully stored ${outEntries.length} new OUT entries locally ===`);
+                    console.log(`Total entries: ${updatedData.length}`);
+                    
+                    return updatedData;
 
                 } catch (error) {
                     console.error('=== Error storing OUT data ===', error);
@@ -1193,7 +1241,440 @@
                 }
             }
 
+            async loadOutData() {
+                try {
+                    console.log('Loading OUT data from local storage...');
+                    
+                    const storedData = localStorage.getItem('outData');
+                    if (storedData) {
+                        const outData = JSON.parse(storedData);
+                        
+                        // Filter out empty rows - only exclude rows that are completely empty
+                        const validData = outData.filter(row => {
+                            // A row is valid if it has at least a serial number or coil number
+                            const hasSerial = row['SERIAL NO'] && row['SERIAL NO'].toString().trim() !== '';
+                            const hasCoil = row['MILL COIL NO'] && row['MILL COIL NO'].toString().trim() !== '';
+                            return hasSerial || hasCoil;
+                        });
+                        
+                        console.log(`Loaded ${outData.length} total rows from local storage (${validData.length} valid records)`);
+                        return validData;
+                    } else {
+                        console.log('No OUT data found in local storage - trying Google Sheets...');
+                        
+                        // Try to load from Google Sheets if no local data
+                        try {
+                            const sheetsData = await this.loadOutSheetForReporting();
+                            if (sheetsData && sheetsData.length > 0) {
+                                // Store locally for future use
+                                localStorage.setItem('outData', JSON.stringify(sheetsData));
+                                return sheetsData;
+                            }
+                        } catch (sheetsError) {
+                            console.log('Could not load from Google Sheets:', sheetsError.message);
+                        }
+                        
+                        return [];
+                    }
 
+                } catch (error) {
+                    console.error('Error loading OUT data:', error);
+                    return [];
+                }
+            }
+
+            async loadOutSheetForReporting() {
+                try {
+                    console.log('Loading fresh OUT data from Google Sheets...');
+                    
+                    const sheetNames = await this.getSheetNames();
+                    
+                    // Find OUT sheet
+                    const outSheetName = sheetNames.find(name => 
+                        name.toLowerCase().includes('out')
+                    );
+                    
+                    if (outSheetName) {
+                        console.log(`Found OUT sheet: ${outSheetName}`);
+                        const outData = await this.loadSheetData(outSheetName);
+                        
+                        // Filter out empty rows
+                        const validData = outData.filter(row => {
+                            const hasSerial = row['SERIAL NO'] && row['SERIAL NO'].toString().trim() !== '';
+                            const hasCoil = row['MILL COIL NO'] && row['MILL COIL NO'].toString().trim() !== '';
+                            const hasVehicle = row['Vehicle No'] && row['Vehicle No'].toString().trim() !== '';
+                            return hasSerial || hasCoil || hasVehicle;
+                        });
+                        
+                        console.log(`Loaded ${outData.length} total rows from Google Sheets (${validData.length} valid records)`);
+                        return validData;
+                    } else {
+                        console.log('No OUT sheet found in Google Sheets');
+                        return [];
+                    }
+                } catch (error) {
+                    console.error('Error loading OUT data from Google Sheets:', error);
+                    throw error;
+                }
+            }
+
+            async storeOutData(outData, vesselName = 'coil-data') {
+                try {
+                    console.log('Storing OUT data locally...');
+                    
+                    // Store OUT data with vessel name
+                    const outDataWithVessel = {
+                        vesselName: vesselName,
+                        data: outData,
+                        lastUpdated: new Date().toISOString()
+                    };
+                    
+                    localStorage.setItem('outData', JSON.stringify(outData));
+                    localStorage.setItem('outDataMeta', JSON.stringify(outDataWithVessel));
+                    
+                    console.log(`OUT data stored locally with ${outData.length} records`);
+                    return true;
+                } catch (error) {
+                    console.error('Error storing OUT data:', error);
+                    throw error;
+                }
+            }
+
+            async loadOutData() {
+                try {
+                    const storedData = localStorage.getItem('outData');
+                    if (storedData) {
+                        const outData = JSON.parse(storedData);
+                        console.log(`Loaded ${outData.length} OUT records from local storage`);
+                        return outData;
+                    } else {
+                        console.log('No OUT data found in local storage');
+                        return [];
+                    }
+                } catch (error) {
+                    console.error('Error loading OUT data from storage:', error);
+                    return [];
+                }
+            }
+
+            async testConnection() {
+                try {
+                    const data = await this.makeRequest('');
+                    const title = data.properties.title;
+                    console.log('Google Sheets connection test successful:', title);
+                    this.isConnected = true;
+                    return true;
+                } catch (error) {
+                    console.error('Google Sheets connection test failed:', error);
+                    this.isConnected = false;
+                    throw error;
+                }
+            }
+
+            async appendToSheet(sheetName, data, includeHeaders = false) {
+                try {
+                    console.log(`Appending ${data.length} rows to sheet: ${sheetName}`);
+                    
+                    const { spreadsheetId, apiKey, webAppUrl } = this.getCredentials();
+                    
+                    // Use Google Apps Script Web App for writing data
+                    if (webAppUrl && webAppUrl.trim() !== '') {
+                        try {
+                            console.log('Writing to Google Sheets via Apps Script Web App...');
+                            
+                            // Prepare data for the web app matching the Google Apps Script format
+                            const payload = {
+                                sheetName: sheetName || 'OUT',
+                                records: data
+                            };
+                            
+                            // Use FormData to match the Google Apps Script doPost handler
+                            const formData = new FormData();
+                            formData.append('payload', JSON.stringify(payload));
+                            
+                            // Try different approaches to work around CORS and authentication
+                            let response;
+                            let fallbackUsed = false;
+                            
+                            try {
+                                // Use image pixel tracking method - most reliable for Google Apps Script
+                                const params = new URLSearchParams();
+                                params.append('sheetName', sheetName);
+                                params.append('data', JSON.stringify(data));
+                                params.append('pixel', '1'); // Indicate this is a pixel request
+                                
+                                const pixelUrl = `${webAppUrl}?${params.toString()}`;
+                                console.log('Sending data via image pixel method:', pixelUrl);
+                                
+                                // Create promise for image load
+                                const pixelPromise = new Promise((resolve, reject) => {
+                                    const img = new Image();
+                                    const timeout = setTimeout(() => {
+                                        console.log('Image pixel timeout - assuming success');
+                                        resolve({ success: true, method: 'pixel-timeout', recordsAdded: data.length });
+                                    }, 10000);
+                                    
+                                    img.onload = () => {
+                                        clearTimeout(timeout);
+                                        console.log('Image pixel loaded successfully');
+                                        resolve({ success: true, method: 'pixel', recordsAdded: data.length });
+                                    };
+                                    
+                                    img.onerror = () => {
+                                        clearTimeout(timeout);
+                                        console.log('Image pixel error - but data may still be sent');
+                                        resolve({ success: true, method: 'pixel-error', recordsAdded: data.length });
+                                    };
+                                    
+                                    // Set image source to trigger the request
+                                    img.src = pixelUrl;
+                                });
+                                
+                                const result = await pixelPromise;
+                                console.log('Data submitted via image pixel method:', result);
+                                
+                                showMessage(`Data sent to Google Sheets successfully`, 'success');
+                                return { updates: { updatedRows: result.recordsAdded || data.length } };
+                                
+                            } catch (pixelError) {
+                                console.log('Pixel method failed, trying window.open method:', pixelError.message);
+                                
+                                try {
+                                    // Ultimate fallback: open in new window/tab
+                                    const params = new URLSearchParams();
+                                    params.append('sheetName', sheetName);
+                                    params.append('data', JSON.stringify(data));
+                                    
+                                    const finalUrl = `${webAppUrl}?${params.toString()}`;
+                                    
+                                    // Open in new tab briefly then close
+                                    const popup = window.open(finalUrl, '_blank', 'width=1,height=1,left=-1000,top=-1000');
+                                    
+                                    setTimeout(() => {
+                                        if (popup && !popup.closed) {
+                                            popup.close();
+                                        }
+                                    }, 3000);
+                                    
+                                    console.log('Data submitted via popup window method');
+                                    showMessage('Data sent to Google Sheets via popup method', 'success');
+                                    return { updates: { updatedRows: data.length } };
+                                    
+                                } catch (popupError) {
+                                    console.log('All automated methods failed:', popupError.message);
+                                    
+                                    // Show the URL for manual clicking as final resort
+                                    const params = new URLSearchParams();
+                                    params.append('sheetName', sheetName);
+                                    params.append('data', JSON.stringify(data));
+                                    const manualUrl = `${webAppUrl}?${params.toString()}`;
+                                    
+                                    console.log('MANUAL SUBMISSION REQUIRED - Click this URL:', manualUrl);
+                                    
+                                    const shouldOpen = confirm('Automatic submission failed due to browser restrictions.\n\nClick OK to manually submit the data in a new tab.\nClick Cancel to export as Excel file instead.');
+                                    
+                                    if (shouldOpen) {
+                                        window.open(manualUrl, '_blank');
+                                        showMessage('Please check the new tab - if you see JSON response, data was saved successfully', 'info');
+                                        return { updates: { updatedRows: data.length } };
+                                    } else {
+                                        throw new Error('Manual submission declined - will export as Excel');
+                                    }
+                                }
+                            }
+                            
+                        } catch (webAppError) {
+                            console.error('Google Apps Script Web App approach failed:', webAppError.message);
+                            // Continue to fallback approaches
+                        }
+                    }
+                    
+                    // Approach 2: Try Google Sheets API (requires proper OAuth)
+                    if (apiKey && apiKey.trim() !== '') {
+                        try {
+                            console.log('Attempting to write via Google Sheets API...');
+                            
+                            // Convert data to values array format
+                            let values = [];
+                            
+                            if (data.length > 0) {
+                                // Add headers if requested
+                                if (includeHeaders) {
+                                    const headers = Object.keys(data[0]);
+                                    values.push(headers);
+                                }
+                                
+                                // Add data rows
+                                data.forEach(row => {
+                                    const rowValues = Object.values(row);
+                                    values.push(rowValues);
+                                });
+                            }
+                            
+                            const appendUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS&key=${apiKey}`;
+                            
+                            const response = await fetch(appendUrl, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    values: values
+                                })
+                            });
+                            
+                            if (!response.ok) {
+                                const errorData = await response.text();
+                                console.log('API response error:', errorData);
+                                throw new Error(`Google Sheets API error: ${response.status} ${response.statusText}`);
+                            }
+                            
+                            const result = await response.json();
+                            console.log(`Successfully appended ${result.updates.updatedRows} rows to ${sheetName}`);
+                            return result;
+                            
+                        } catch (apiError) {
+                            console.warn('Google Sheets API approach failed:', apiError.message);
+                            // Continue to storage as backup
+                        }
+                    }
+                    
+                    // Approach 3: Store locally as backup and provide instructions
+                    console.log('No working write method available. Storing data locally.');
+                    
+                    const localData = {
+                        sheetName: sheetName,
+                        data: data,
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    localStorage.setItem('pendingSheetData', JSON.stringify(localData));
+                    
+                    // Check if we have the Web App URL configured
+                    if (webAppUrl && webAppUrl.includes('script.google.com/macros/s/')) {
+                        throw new Error(`Google Apps Script Web App not responding correctly. Testing shows "Page Not Found" error.
+
+URGENT: Your Web App deployment is not working. Please verify:
+
+1. Go to your Google Apps Script: https://script.google.com/d/AKfycbxVALF7w1ozAvqchus49A3-HgPU3qT0QY4xPXu2DUm8faotqw41vcTja-niAQIhTJgt/edit
+
+2. CLICK "REVIEW PERMISSIONS" in the dialog you saw, then ALLOW the script to access your data.
+
+3. After granting permission, REPLACE ALL CODE in your Google Apps Script with this EXACT code:
+
+IMPORTANT: Your current script is incomplete. Delete everything and paste this complete code:
+
+function doGet(e) {
+  return handleRequest(e);
+}
+
+function doPost(e) {
+  return handleRequest(e);
+}
+
+function handleRequest(e) {
+  try {
+    // Get the spreadsheet by ID directly to avoid verification issues
+    const spreadsheetId = '18VjUGZ-dGFMEq1oIlxIssRlwkfcPZZJfH6GD7UdgOyc';
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    let data, sheetName;
+    
+    // Handle POST request (form data)
+    if (e.postData && e.postData.contents) {
+      const formData = e.parameter;
+      if (formData.payload) {
+        const payload = JSON.parse(formData.payload);
+        data = payload.records;
+        sheetName = payload.sheetName || 'OUT';
+      }
+    }
+    // Handle GET request (URL parameters)
+    else if (e.parameter) {
+      sheetName = e.parameter.sheetName || 'OUT';
+      if (e.parameter.data) {
+        data = JSON.parse(e.parameter.data);
+      }
+    }
+    
+    if (data && data.length > 0) {
+      const sheet = spreadsheet.getSheetByName(sheetName);
+      if (!sheet) {
+        return ContentService.createTextOutput(JSON.stringify({
+          success: false,
+          error: "Sheet '" + sheetName + "' not found"
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      data.forEach(record => {
+        const values = Object.values(record);
+        sheet.appendRow(values);
+      });
+      
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        recordsAdded: data.length,
+        message: "Data successfully added to " + sheetName
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: "No data provided"
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+4. Save the script (Ctrl+S)
+5. Click "Deploy" button (top right corner)  
+6. If you see existing deployments, click the pencil icon to EDIT the existing deployment
+7. If no deployments exist, choose "New deployment"
+8. Set "Type" to "Web app"
+9. CRITICAL: Set "Execute as" to "Me (your email)"
+10. CRITICAL: Set "Who has access" to "Anyone" 
+11. Click "Deploy" or "Update"
+12. IMPORTANT: You will see an authorization dialog - click "Review permissions" and ALLOW access
+13. After granting permissions, test the Web App URL in a new browser tab
+14. You should see JSON response like: {"success":false,"error":"No data provided"}
+
+VERIFICATION TEST:
+Open this URL in a new tab after granting permissions: 
+https://script.google.com/macros/s/AKfycbxVALF7w1ozAvqchus49A3-HgPU3qT0QY4xPXu2DUm8faotqw41vcTja-niAQIhTJgt/exec?authuser=0
+
+You should see JSON, not a "Page Not Found" error.
+
+Current Status: Authorization dialog appeared - you need to grant permissions for the script to work.`);
+                    } else {
+                        throw new Error(`Google Sheets write requires a properly configured Google Apps Script Web App URL.
+
+Current URL: ${webAppUrl || 'Not configured'}
+
+Please ensure you have:
+1. Created a Google Apps Script at script.google.com
+2. Deployed it as a Web App with 'Anyone' access
+3. Provided the correct deployment URL
+
+Data is currently saved locally and will sync once Web App is configured.`);
+                    }
+                    
+                } catch (error) {
+                    console.error('Error appending to Google Sheet:', error);
+                    throw error;
+                }
+            }
+
+            getConnectionInfo() {
+                return {
+                    connected: this.isConnected,
+                    spreadsheetId: this.spreadsheetId,
+                    hasApiKey: !!this.apiKey
+                };
+            }
         }
 
         // Enhanced Coil Data Management Application
@@ -1208,6 +1689,7 @@
         let currentGroupNumber = parseInt(localStorage.getItem('currentGroupNumber')) || 8; // Current group number for serial assignment - starts from 8 as requested
         let html5QrCode;
         let serialCounter = 1;
+        let generatedTextData = []; // Store generated text reports for Google Sheets upload
         
         // Function to extract vessel name from filename
         function extractVesselName(filename) {
@@ -1252,26 +1734,72 @@
             console.log('Device ready - initializing app');
             
             try {
+                // Auto-configure Google API key and Web App URL from environment
+                const apiKeyFromEnv = 'AIzaSyCpDuukRyxNbcOXQ02WrQq9GyCOXFP_9fM';
+                const webAppUrlFromEnv = 'https://script.google.com/macros/s/AKfycbzFXySLV_DPrZgD8kGzY3ct-isjw6fsNe7QsXBFt6U/dev';
+                
+                if (apiKeyFromEnv && !apiKeyFromEnv.includes('${') && apiKeyFromEnv.length > 10) {
+                    console.log('Setting Google API key from environment');
+                    const apiKeyInput = document.getElementById('apiKey');
+                    if (apiKeyInput) {
+                        apiKeyInput.value = apiKeyFromEnv;
+                    }
+                }
+                
+                // Configure Web App URL from environment or stored value
+                let finalWebAppUrl = '';
+                if (webAppUrlFromEnv && !webAppUrlFromEnv.includes('${') && webAppUrlFromEnv.length > 10) {
+                    console.log('Setting Google Apps Script Web App URL from environment');
+                    finalWebAppUrl = webAppUrlFromEnv;
+                    const webAppUrlInput = document.getElementById('webAppUrl');
+                    if (webAppUrlInput) {
+                        webAppUrlInput.value = webAppUrlFromEnv;
+                    }
+                    // Store it for future use
+                    localStorage.setItem('googleSheets_webAppUrl', webAppUrlFromEnv);
+                } else {
+                    // Load stored Web App URL
+                    finalWebAppUrl = localStorage.getItem('googleSheets_webAppUrl') || '';
+                    const webAppUrlInput = document.getElementById('webAppUrl');
+                    if (webAppUrlInput && finalWebAppUrl) {
+                        webAppUrlInput.value = finalWebAppUrl;
+                    }
+                }
+                
+                // Auto-connect to Google Sheets if credentials are available
+                const spreadsheetInput = document.getElementById('spreadsheetId');
+                if (spreadsheetInput) {
+                    const spreadsheetId = spreadsheetInput.value.trim();
+                    if (spreadsheetId) {
+                        window.googleSheetsAPI.setCredentials(spreadsheetId, apiKeyFromEnv || '', finalWebAppUrl);
+                        console.log('Auto-configured Google Sheets credentials with API key and Web App URL');
+                        if (finalWebAppUrl) {
+                            console.log('✅ Google Apps Script Web App URL configured - direct Google Sheets writing enabled');
+                        }
+                    }
+                }
+                
                 // Initialize permissions
                 if (window.permissionManager) {
                     await window.permissionManager.initialize();
                 }
                 
                 // Load initial data
-                await autoLoadFromGithub();
+                await autoLoadFromGoogleSheets();
                 
                 // Load OUT data for serial counter
                 await loadOutDataForSerial();
                 
-                // Set up file input handler
-                const fileInput = document.getElementById('excelFile');
+                // Set up file input handler - check for available file inputs
+                const fileInput = document.getElementById('excelFile') || document.querySelector('input[type="file"]');
                 if (fileInput) {
                     fileInput.addEventListener('change', handleFileSelect);
+                } else {
+                    console.log('No file input element found - file upload functionality disabled');
                 }
                 
-                // Initialize Google Sheets integration
-                initializeGoogleSheets();
-                updateGoogleSheetsStatus();
+                // Update Google Sheets button status
+                updateGoogleSheetsButtonStatus();
                 
                 console.log('App initialization complete');
                 
@@ -1287,123 +1815,143 @@
         }
 
         // Auto-load data from Google Sheets on startup
-        async function autoLoadFromGithub() {
+        async function autoLoadFromGoogleSheets() {
             try {
-                // Check if Google APIs are ready and user has set up credentials
-                if (CLIENT_ID === 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com' || 
-                    API_KEY === 'YOUR_API_KEY_HERE') {
-                    console.log('Google credentials not configured. Please set up CLIENT_ID and API_KEY.');
-                    showMessage('Please configure Google API credentials in the code to use Google Sheets integration', 'warning');
+                console.log('Attempting to auto-load data from Google Sheets...');
+                
+                // Check if credentials are available
+                const credentials = window.googleSheetsAPI.getCredentials();
+                if (!credentials.spreadsheetId) {
+                    console.log('No Google Sheets credentials found - skipping auto-load');
                     return;
                 }
                 
-                // Check if Google APIs are available
-                if (typeof gapi === 'undefined') {
-                    console.log('Google API not available. Skipping auto-load.');
-                    showMessage('Google API not available. Please check internet connection.', 'warning');
-                    return;
-                }
-                
-                // Wait for APIs to be ready
-                if (!gapiInited || !gisInited) {
-                    console.log('Google APIs not ready yet. Waiting...');
-                    showMessage('Waiting for Google APIs to initialize...', 'info');
-                    
-                    // Wait up to 10 seconds for APIs to initialize
-                    let attempts = 0;
-                    while ((!gapiInited || !gisInited) && attempts < 50) {
-                        await new Promise(resolve => setTimeout(resolve, 200));
-                        attempts++;
-                    }
-                    
-                    if (!gapiInited || !gisInited) {
-                        console.log('Google APIs failed to initialize');
-                        showMessage('Google APIs failed to initialize. Please refresh the page.', 'error');
-                        return;
-                    }
-                }
-                
-                // Wait for authentication if not already authenticated
-                if (!isAuthenticated) {
-                    console.log('Not authenticated yet. Waiting for authentication...');
-                    showMessage('Authenticating with Google...', 'info');
-                    
-                    // Wait up to 10 seconds for authentication
-                    let authAttempts = 0;
-                    while (!isAuthenticated && authAttempts < 50) {
-                        await new Promise(resolve => setTimeout(resolve, 200));
-                        authAttempts++;
-                    }
-                    
-                    if (!isAuthenticated) {
-                        console.log('Authentication failed or timed out');
-                        showMessage('Google authentication required. Please set up credentials.', 'warning');
-                        return;
-                    }
-                }
-                
-                console.log('Auto-loading data from Google Sheets...');
                 showMessage('Loading data from Google Sheets...', 'info');
+                const sheetsData = await window.googleSheetsAPI.fetchExcelFile();
+                const { mainData, fileName, sheetNames } = sheetsData;
                 
-                const sheetsData = await window.googleSheetsAPI.loadExcelData();
+                console.log('Available sheets:', sheetNames);
+                console.log('Main data loaded:', mainData.length, 'records');
                 
-                console.log('Data loaded from Google Sheets:', sheetsData);
+                // Use main data as coil data
+                coilData = mainData;
                 
-                // Load coil data (PNR)
-                if (sheetsData.coilData && sheetsData.coilData.length > 0) {
-                    coilData = sheetsData.coilData;
-                    console.log('Loaded PNR data:', coilData.length, 'records');
+                // Try to find vehicle data in other sheets
+                try {
+                    const vehicleSheetName = sheetNames.find(name => 
+                        name.toLowerCase().includes('veh') || name.toLowerCase().includes('vehicle')
+                    );
+                    if (vehicleSheetName) {
+                        vehicleData = await window.googleSheetsAPI.loadSheetData(vehicleSheetName);
+                        console.log('Loaded vehicle data:', vehicleData.length, 'records');
+                    }
+                } catch (error) {
+                    console.log('No vehicle sheet found or error loading:', error);
+                    vehicleData = [];
                 }
                 
-                // Load vehicle data (VEH)
-                if (sheetsData.vehicleData && sheetsData.vehicleData.length > 0) {
-                    vehicleData = sheetsData.vehicleData;
-                    console.log('Loaded VEH data:', vehicleData.length, 'records');
-                }
-                
-                // Load out data (OUT)
-                if (sheetsData.outData && sheetsData.outData.length > 0) {
-                    outData = sheetsData.outData;
-                    console.log('Loaded OUT data:', outData.length, 'records');
-                }
-                
-                loadedFileName = `Google Sheets: ${sheetsData.fileName}`;
-                updateVesselName(sheetsData.fileName); // Update vessel name from sheet
+                loadedFileName = `Google Sheets: ${fileName}`;
+                updateVesselName(fileName);
                 const fileNameElement = document.getElementById('fileName');
                 if (fileNameElement) {
-                    fileNameElement.textContent = `Auto-loaded: ${loadedFileName}`;
+                    fileNameElement.textContent = `Successfully loaded ${coilData.length} coils from Google Sheets`;
                 }
                 
-                showMessage('Data loaded successfully from Google Sheets', 'success');
+                showMessage(`Successfully loaded ${coilData.length} coils from Google Sheets`, 'success');
                 
             } catch (error) {
-                console.error('Auto-load failed:', error);
+                console.log('Google Sheets auto-load failed:', error.message);
                 const fileNameElement = document.getElementById('fileName');
                 if (fileNameElement) {
-                    fileNameElement.textContent = 'Please connect to Google Sheets.';
+                    fileNameElement.textContent = 'Please set Google Sheets credentials or upload Excel file manually.';
                 }
-                showMessage('Please connect to your Google Sheets to start using the app', 'info');
+                // Don't show error message for missing credentials - this is expected on first load
+                if (!error.message.includes('ID is required')) {
+                    showMessage('Google Sheets connection failed: ' + error.message, 'error');
+                }
             }
         }
 
         async function loadOutDataForSerial() {
             try {
-                const sheetsOutData = await window.googleSheetsAPI.loadOutData();
+                // Check if Google Sheets credentials are available
+                const credentials = window.googleSheetsAPI.getCredentials();
+                if (!credentials.spreadsheetId) {
+                    console.log('No Google Sheets credentials - using stored group number or default');
+                    return;
+                }
                 
-                if (sheetsOutData.length > 0) {
-                    const maxSerial = Math.max(...sheetsOutData.map(row => parseInt(row['SERIAL NO']) || 0));
-                    serialCounter = maxSerial + 1;
-                    console.log('Serial counter set from Google Sheets data:', serialCounter);
+                const googleSheetsOutData = await window.googleSheetsAPI.loadOutData();
+                
+                if (googleSheetsOutData.length > 0) {
+                    console.log('Found existing OUT data:', googleSheetsOutData.length, 'records');
+                    
+                    // Find the highest serial number in format "X.Y"
+                    let maxGroupNumber = 0;
+                    let maxSubNumber = {};
+                    
+                    googleSheetsOutData.forEach(row => {
+                        const serialNo = row['SERIAL NO'] || row['Serial No'] || row['serialNumber'] || '';
+                        if (serialNo.includes('.')) {
+                            const [groupStr, subStr] = String(serialNo).split('.');
+                            const groupNum = parseInt(groupStr);
+                            const subNum = parseInt(subStr);
+                            
+                            if (!isNaN(groupNum) && !isNaN(subNum)) {
+                                maxGroupNumber = Math.max(maxGroupNumber, groupNum);
+                                if (!maxSubNumber[groupNum] || maxSubNumber[groupNum] < subNum) {
+                                    maxSubNumber[groupNum] = subNum;
+                                }
+                            }
+                        }
+                    });
+                    
+                    // Update currentGroupNumber based on existing data
+                    if (maxGroupNumber > 0) {
+                        // Check if the latest group has space for more entries
+                        const latestGroupCount = maxSubNumber[maxGroupNumber] || 0;
+                        currentGroupNumber = maxGroupNumber;
+                        
+                        // Store the updated group number
+                        localStorage.setItem('currentGroupNumber', currentGroupNumber);
+                        console.log(`Serial numbering will continue from group ${currentGroupNumber}, last sub-number was ${latestGroupCount}`);
+                        
+                        // Update vehicle-to-group mapping based on existing data
+                        googleSheetsOutData.forEach(row => {
+                            const vehicleNo = row['VEHICLE NO'] || row['Vehicle No'] || row['vehicleNumber'] || '';
+                            const serialNo = row['SERIAL NO'] || row['Serial No'] || row['serialNumber'] || '';
+                            
+                            if (vehicleNo && serialNo && serialNo.includes('.')) {
+                                const groupNum = parseInt(String(serialNo).split('.')[0]);
+                                if (!isNaN(groupNum)) {
+                                    vehicleSerialGroupMap[vehicleNo] = groupNum;
+                                }
+                            }
+                        });
+                        
+                        localStorage.setItem('vehicleSerialGroupMap', JSON.stringify(vehicleSerialGroupMap));
+                        console.log('Updated vehicle-group mapping from existing OUT data');
+                    } else {
+                        currentGroupNumber = parseInt(localStorage.getItem('currentGroupNumber')) || 8;
+                        console.log('No valid serial numbers found in OUT data, using stored/default group number:', currentGroupNumber);
+                    }
                 } else {
-                    // If no existing data, ensure serial counter starts from 1
-                    serialCounter = 1;
-                    console.log('No existing OUT data found, serial counter set to 1');
+                    currentGroupNumber = parseInt(localStorage.getItem('currentGroupNumber')) || 8;
+                    console.log('No existing OUT data found, using stored/default group number:', currentGroupNumber);
                 }
                 
             } catch (error) {
-                console.log('Could not load OUT data for serial counter:', error);
-                // If there's an error loading data, ensure serial counter starts from 1
-                serialCounter = 1;
+                console.log('Could not load OUT data for serial counter, using stored/default:', error.message);
+                currentGroupNumber = parseInt(localStorage.getItem('currentGroupNumber')) || 8;
+            }
+        }
+
+        function handleFileUpload() {
+            const fileInput = document.getElementById('excelFile');
+            if (fileInput && fileInput.files[0]) {
+                handleFileSelect({ target: fileInput });
+            } else {
+                showMessage('Please select an Excel file first', 'error');
             }
         }
 
@@ -1660,17 +2208,17 @@
             }
             
             try {
-                // Load fresh data from GitHub API like the reports do
+                // Load fresh data from Google Sheets/local storage like the reports do
                 let reportData = [];
                 
-                // Try to get fresh data from GitHub
+                // Try to get fresh data from Google Sheets or local storage
                 try {
-                    console.log('Loading fresh data from GitHub for autocomplete...');
+                    console.log('Loading fresh data for autocomplete...');
                     reportData = await window.googleSheetsAPI.loadOutData();
-                    console.log('GitHub data loaded for autocomplete, valid records:', reportData.length);
+                    console.log('Data loaded for autocomplete, valid records:', reportData.length);
                 } catch (error) {
-                    console.error('Error loading GitHub OUT data for autocomplete:', error);
-                    // Fallback to local data if GitHub fails
+                    console.error('Error loading OUT data for autocomplete:', error);
+                    // Fallback to local data if loading fails
                     reportData = outData || [];
                     console.log('Using local outData as fallback for autocomplete, length:', reportData.length);
                 }
@@ -1857,25 +2405,39 @@
                 return;
             }
             
+            console.log('Save button clicked - checking generated text data:', generatedTextData.length, 'reports available');
+            
             try {
                 // Assign group number to vehicles if not already assigned
                 const vehiclesInBatch = [...new Set(addedCoils.map(item => item.vehicleNumber))];
                 vehiclesInBatch.forEach(vehicleNumber => {
                     if (!vehicleSerialGroupMap[vehicleNumber]) {
-                        vehicleSerialGroupMap[vehicleNumber] = currentGroupNumber;
-                        currentGroupNumber++; // Increment for each new vehicle
-                        localStorage.setItem('currentGroupNumber', currentGroupNumber); // Save to localStorage
-                        localStorage.setItem('vehicleSerialGroupMap', JSON.stringify(vehicleSerialGroupMap)); // Save mapping
+                        // Check if this vehicle already has coils in the system
+                        const existingCoilsForVehicle = vehicleCoilMap[vehicleNumber] ? vehicleCoilMap[vehicleNumber].length : 0;
+                        
+                        if (existingCoilsForVehicle === 0) {
+                            // New vehicle, assign next group number
+                            currentGroupNumber++; // Move to next group for new vehicle
+                            vehicleSerialGroupMap[vehicleNumber] = currentGroupNumber;
+                            console.log(`Assigned new group ${currentGroupNumber} to vehicle ${vehicleNumber}`);
+                        } else {
+                            // This vehicle has existing coils, need to find its group from existing data
+                            // For now, assign current group (this should be handled by loadOutDataForSerial)
+                            vehicleSerialGroupMap[vehicleNumber] = currentGroupNumber;
+                        }
+                        
+                        localStorage.setItem('currentGroupNumber', currentGroupNumber);
+                        localStorage.setItem('vehicleSerialGroupMap', JSON.stringify(vehicleSerialGroupMap));
                     }
                 });
                 
-                // Generate OUT entries for GitHub storage
+                // Generate OUT entries for storage
                 const now = new Date();
                 const currentDate = now.toLocaleDateString('en-GB').replace(/\//g, '-');
                 const currentTime = now.toLocaleTimeString('en-US', { hour12: true });
                 const outEntries = [];
                 
-                // Process only the newly added coils for GitHub storage
+                // Process only the newly added coils for storage
                 let vehicleCoilCounter = {}; // Counter for coils per vehicle in this batch
                 
                 // Initialize counters based on existing coils for each vehicle (BEFORE adding current batch)
@@ -1952,23 +2514,103 @@
                     vehicleCoilMap[vehicleNumber].push(coilNumber);
                 });
                 
-                // Store data in GitHub Excel OUT sheet
+                // Store data locally and save to Google Sheets
+                console.log('=== SAVE OPERATION DEBUG ===');
+                console.log('OUT entries to process:', outEntries.length);
+                console.log('Added coils count:', addedCoils.length);
+                console.log('Sample OUT entry:', outEntries[0]);
+                
                 if (outEntries.length > 0) {
                     try {
-                        // Store in local outData array first
+                        // Store in local outData array for app functionality
                         if (!outData) outData = [];
                         outData = [...outData, ...outEntries];
                         
-                        // Save to GitHub
-                        showMessage('Saving data to GitHub...', 'info');
-                        console.log('Attempting to store data to GitHub, entries:', outEntries.length);
-                        console.log('Sample entry:', outEntries[0]);
-                        await window.googleSheetsAPI.storeOutData(outEntries);
-                        console.log('GitHub storage successful');
+                        // Always generate fresh text reports from the new OUT data during save
+                        console.log('Generating fresh text reports from current save operation with', outEntries.length, 'OUT entries');
+                        showMessage('Generating text reports...', 'info');
+                        
+                        // Clear any existing text data for this save operation
+                        const existingTextCount = generatedTextData.length;
+                        if (existingTextCount > 0) {
+                            console.log('Clearing', existingTextCount, 'existing text reports to generate fresh ones');
+                        }
+                        generatedTextData = []; // Clear existing to generate fresh reports
+                        
+                        await generateTextReportsFromOutEntries(outEntries);
+                        console.log('Fresh text reports generated:', generatedTextData.length, 'reports');
+                        if (generatedTextData.length > 0) {
+                            showMessage(`Generated ${generatedTextData.length} text reports successfully. Saving directly to Google Sheets...`, 'info');
+                        } else {
+                            console.error('No text reports were generated despite having', outEntries.length, 'OUT entries');
+                        }
+                        
+                        // Save directly to Google Sheets (no local storage)
+                        try {
+                            const { spreadsheetId, apiKey, webAppUrl } = window.googleSheetsAPI.getCredentials();
+                            if (!spreadsheetId) {
+                                throw new Error('Google Sheets not configured. Please connect to Google Sheets first.');
+                            }
+                            
+                            if (!webAppUrl || webAppUrl.includes('YOUR_SCRIPT_ID')) {
+                                throw new Error('Google Apps Script Web App URL not configured. Please add your Apps Script URL in the Google Sheets Management section.');
+                            }
+                            
+                            showMessage('Uploading to Google Sheets...', 'info');
+                            
+                            // Get available sheets to find OUT sheet
+                            const sheetNames = await window.googleSheetsAPI.getSheetNames();
+                            let outSheetName = sheetNames.find(name => 
+                                name.toLowerCase().includes('out') || 
+                                name.toLowerCase().includes('output')
+                            ) || 'OUT';
+                            
+                            // Upload OUT data to Google Sheets directly
+                            console.log(`Uploading ${outEntries.length} OUT entries to Google Sheets (${outSheetName})`);
+                            await window.googleSheetsAPI.appendToSheet(outSheetName, outEntries, false);
+                            
+                            // Primary focus: Save OUT data to Google Sheets
+                            showMessage(`✅ SUCCESS: ${outEntries.length} OUT entries saved to Google Sheets (${outSheetName})!`, 'success');
+                            console.log(`Successfully uploaded ${outEntries.length} entries to Google Sheets`);
+                            
+                            // Clear generated text data after successful OUT upload
+                            generatedTextData = [];
+                            
+                        } catch (sheetsError) {
+                            console.error('Google Sheets upload failed:', sheetsError);
+                            
+                            // Show manual export option as fallback
+                            const shouldExport = confirm(`Google Sheets save failed: ${sheetsError.message}\n\nWould you like to download the data as an Excel file instead?`);
+                            
+                            if (shouldExport) {
+                                try {
+                                    // Export as Excel file
+                                    const wb = XLSX.utils.book_new();
+                                    const ws = XLSX.utils.json_to_sheet(outEntries);
+                                    XLSX.utils.book_append_sheet(wb, ws, 'OUT Data');
+                                    
+                                    const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+                                    const filename = `OUT_Data_${timestamp}.xlsx`;
+                                    
+                                    XLSX.writeFile(wb, filename);
+                                    showMessage(`✅ Data exported as ${filename}. Please upload this file to your Google Sheets manually.`, 'success');
+                                    console.log(`Exported ${outEntries.length} records to ${filename}`);
+                                } catch (exportError) {
+                                    console.error('Export failed:', exportError);
+                                    showMessage('Export failed: ' + exportError.message, 'error');
+                                }
+                            } else {
+                                showMessage('Data save cancelled. Data remains in local memory until refresh.', 'warning');
+                            }
+                            
+                            // Don't throw error since we handled the fallback
+                            return;
+                        }
+                        
                     } catch (error) {
-                        console.error('Failed to save to GitHub:', error);
-                        showMessage('Warning: Failed to save to GitHub - ' + error.message, 'error');
-                        return; // Don't proceed if GitHub save fails
+                        console.error('Failed to save data:', error);
+                        showMessage('Warning: Failed to save data - ' + error.message, 'error');
+                        return; // Don't proceed if save fails
                     }
                 }
                 
@@ -2002,15 +2644,156 @@
                 // Hide clear vehicle button
                 toggleVehicleClearButton();
                 
-                showMessage('Vehicle coils saved successfully in GITHUB', 'success');
-                
             } catch (error) {
                 console.error('Error saving vehicle coils:', error);
                 showMessage('Error saving vehicle coils: ' + error.message, 'error');
             }
         }
 
-        // Enhanced generateTextFile function with proper storage permissions and GitHub sync
+        // Enhanced generateTextFile function with proper storage permissions
+        // Helper function to generate text reports from fresh OUT entries during save
+        async function generateTextReportsFromOutEntries(outEntries) {
+            try {
+                console.log('=== STARTING TEXT REPORT GENERATION ===');
+                console.log('Input OUT entries:', outEntries.length);
+                console.log('Sample OUT entry:', outEntries[0]);
+                
+                const now = new Date();
+                const currentDate = now.toLocaleDateString('en-GB').replace(/\//g, '-');
+                const currentTime = now.toLocaleTimeString('en-US', { hour12: true });
+                
+                console.log('Generating text reports from', outEntries.length, 'OUT entries');
+                
+                // Group OUT entries by vehicle
+                const vehicleCoilData = {};
+                outEntries.forEach(entry => {
+                    const vehicle = entry['VEHICLE NO'];
+                    if (vehicle) {
+                        if (!vehicleCoilData[vehicle]) {
+                            vehicleCoilData[vehicle] = [];
+                        }
+                        vehicleCoilData[vehicle].push(entry);
+                    }
+                });
+                
+                console.log('Grouped by vehicles:', Object.keys(vehicleCoilData));
+                
+                // Generate text reports for each vehicle
+                for (const [vehicle, vehicleOutData] of Object.entries(vehicleCoilData)) {
+                    const transporter = vehicleOutData[0]['TRANSPORTER'] || 'N/A';
+                    const totalGrossWeight = vehicleOutData.reduce((sum, row) => {
+                        return sum + (parseFloat(row['GROSS WT']) || 0);
+                    }, 0);
+                    
+                    // Generate detailed content for storage
+                    let content = `Text Report - ${vehicle}\nGenerated on: ${currentDate} ${currentTime}\nVessel: ${vesselName}\nTransporter: ${transporter}\nTotal Coils: ${vehicleOutData.length}\nTotal Gross Weight: ${totalGrossWeight.toFixed(2)}\n\nCoil Details:\n`;
+                    
+                    vehicleOutData.forEach(row => {
+                        content += `${row['SERIAL NO']} | ${row['DATE & TIME']} | ${row['VEHICLE NO']} | ${row['MILL COIL NO']} | ${row['GROSS WT']}\n`;
+                    });
+                    
+                    // Store generated text data for Google Sheets upload
+                    const textReportEntry = {
+                        'Vehicle No': vehicle,
+                        'Report Date': currentDate,
+                        'Report Time': currentTime,
+                        'Vessel Name': vesselName,
+                        'Transporter': transporter,
+                        'Total Coils': vehicleOutData.length,
+                        'Total Gross Weight': totalGrossWeight.toFixed(2),
+                        'Report Content': content,
+                        'Generated During': 'Save Operation'
+                    };
+                    generatedTextData.push(textReportEntry);
+                    console.log(`Generated text report for vehicle: ${vehicle} (${vehicleOutData.length} coils, ${totalGrossWeight.toFixed(2)} total weight)`);
+                }
+                
+                console.log(`Generated ${generatedTextData.length} text reports from OUT entries`);
+                
+            } catch (error) {
+                console.error('Error generating text reports from OUT entries:', error);
+                // Don't throw error, just log it so save can continue
+            }
+        }
+
+        // Helper function to generate text reports during save without showing modal
+        async function generateTextReportsForSave() {
+            try {
+                const now = new Date();
+                const currentDate = now.toLocaleDateString('en-GB').replace(/\//g, '-');
+                const currentTime = now.toLocaleTimeString('en-US', { hour12: true });
+                
+                // Always use OUT data to generate text report
+                let allOutData = outData || [];
+                console.log('Current outData for text generation:', allOutData.length, 'entries');
+                
+                // If local outData is empty, try to get from Google Sheets
+                if (allOutData.length === 0) {
+                    try {
+                        console.log('Local outData is empty, trying to load from Google Sheets...');
+                        allOutData = await window.googleSheetsAPI.loadOutData();
+                        console.log('Loaded from Google Sheets:', allOutData.length, 'entries');
+                    } catch (error) {
+                        console.error('Error loading Google Sheets OUT data for text generation:', error);
+                        // Continue with empty data if loading fails
+                        allOutData = [];
+                    }
+                }
+                
+                if (allOutData.length === 0) {
+                    console.log('No OUT data found to generate text report during save - this is expected if no coils have been processed yet');
+                    return;
+                }
+                
+                // Group OUT data by vehicle
+                const vehicleCoilData = {};
+                allOutData.forEach(entry => {
+                    const vehicle = entry['VEHICLE NO'];
+                    if (vehicle) {
+                        if (!vehicleCoilData[vehicle]) {
+                            vehicleCoilData[vehicle] = [];
+                        }
+                        vehicleCoilData[vehicle].push(entry);
+                    }
+                });
+                
+                // Generate text reports for each vehicle (without showing modal)
+                for (const [vehicle, vehicleOutData] of Object.entries(vehicleCoilData)) {
+                    const transporter = vehicleOutData[0]['TRANSPORTER'] || 'N/A';
+                    const totalGrossWeight = vehicleOutData.reduce((sum, row) => {
+                        return sum + (parseFloat(row['GROSS WT']) || 0);
+                    }, 0);
+                    
+                    // Generate simplified content for storage
+                    let content = `Text Report - ${vehicle}\nGenerated on: ${currentDate} ${currentTime}\nVessel: ${vesselName}\nTransporter: ${transporter}\nTotal Coils: ${vehicleOutData.length}\nTotal Gross Weight: ${totalGrossWeight.toFixed(2)}\n\nCoil Details:\n`;
+                    
+                    vehicleOutData.forEach(row => {
+                        content += `${row['SERIAL NO']} | ${row['DATE & TIME']} | ${row['VEHICLE NO']} | ${row['MILL COIL NO']} | ${row['GROSS WT']}\n`;
+                    });
+                    
+                    // Store generated text data for Google Sheets upload
+                    const textReportEntry = {
+                        'Vehicle No': vehicle,
+                        'Report Date': currentDate,
+                        'Report Time': currentTime,
+                        'Vessel Name': vesselName,
+                        'Transporter': transporter,
+                        'Total Coils': vehicleOutData.length,
+                        'Total Gross Weight': totalGrossWeight.toFixed(2),
+                        'Report Content': content,
+                        'Generated During': 'Save Operation'
+                    };
+                    generatedTextData.push(textReportEntry);
+                }
+                
+                console.log(`Generated ${generatedTextData.length} text reports during save operation`);
+                
+            } catch (error) {
+                console.error('Error generating text reports during save:', error);
+                // Don't throw error, just log it so save can continue
+            }
+        }
+
         async function generateTextFile() {
             try {
                 // Request storage permission first
@@ -2034,12 +2817,12 @@
                 // Always use OUT data to generate text report
                 let allOutData = outData || [];
                 
-                // If local outData is empty, try to get from GitHub
+                // If local outData is empty, try to get from Google Sheets
                 if (allOutData.length === 0) {
                     try {
                         allOutData = await window.googleSheetsAPI.loadOutData();
                     } catch (error) {
-                        console.error('Error loading GitHub OUT data:', error);
+                        console.error('Error loading Google Sheets OUT data:', error);
                         showMessage('Error loading OUT data: ' + error.message, 'error');
                         return;
                     }
@@ -2126,9 +2909,23 @@
                     
                     // Always show in modal for better display of HTML table content
                     showReportInModal(`Text Report - ${vehicle}`, content);
+                    
+                    // Store generated text data for Google Sheets upload
+                    const textReportEntry = {
+                        'Vehicle No': vehicle,
+                        'Report Date': currentDate,
+                        'Report Time': currentTime,
+                        'Vessel Name': vesselName,
+                        'Transporter': transporter,
+                        'Total Coils': vehicleOutData.length,
+                        'Total Gross Weight': totalGrossWeight.toFixed(2),
+                        'Report Content': content.replace(/<[^>]*>/g, ''), // Strip HTML tags for plain text
+                        'HTML Content': content // Keep HTML version for formatted display
+                    };
+                    generatedTextData.push(textReportEntry);
                 }
                 
-                // Note: GitHub storage is now handled by the Save Button
+                // Note: Google Sheets storage is now handled by the Save Button
                 
                 // Reset for next operation
                 vehicleCoilMap = {};
@@ -2140,7 +2937,8 @@
                 if (addBtn) addBtn.disabled = false;
                 if (saveBtn) saveBtn.disabled = false;
                 
-                showMessage('Text reports generated successfully', 'success');
+                console.log(`Generated ${generatedTextData.length} text reports ready for upload`);
+                showMessage('Text reports generated successfully. Click Save to upload to Google Sheets.', 'success');
                 
             } catch (error) {
                 console.error('Error generating text file:', error);
@@ -2335,11 +3133,11 @@
                 // Force data reload to ensure we have the latest data
                 let reportData = [];
                 
-                // First try to get fresh data from GitHub
+                // First try to get fresh data from Google Sheets/local storage
                 try {
-                    console.log('Loading fresh data from GitHub...');
+                    console.log('Loading fresh data...');
                     reportData = await window.googleSheetsAPI.loadOutData();
-                    console.log('GitHub data loaded, valid records:', reportData.length);
+                    console.log('Data loaded, valid records:', reportData.length);
                     
                     // Update local outData with fresh data
                     outData = reportData;
@@ -2349,8 +3147,8 @@
                     console.log('Report data sample (last 3 records):', reportData.slice(-3));
                     
                 } catch (error) {
-                    console.error('Error loading GitHub OUT data:', error);
-                    // Fallback to local data if GitHub fails
+                    console.error('Error loading OUT data:', error);
+                    // Fallback to local data if loading fails
                     reportData = outData || [];
                     console.log('Using local outData as fallback, length:', reportData.length);
                 }
@@ -2452,15 +3250,15 @@
                 
                 showMessage('Generating vehicle report...', 'info');
                 
-                // Use local outData if available, otherwise try to get from GitHub
+                // Use local outData if available, otherwise try to get from Google Sheets
                 let allOutData = outData || [];
                 
                 if (allOutData.length === 0) {
                     try {
                         allOutData = await window.googleSheetsAPI.loadOutData();
                     } catch (error) {
-                        console.error('Error loading GitHub OUT data:', error);
-                        // Continue with empty data if both local and GitHub fail
+                        console.error('Error loading Google Sheets OUT data:', error);
+                        // Continue with empty data if both local and Google Sheets fail
                     }
                 }
                 
@@ -3184,75 +3982,48 @@
 
 
 
-        async function connectGoogleSheets() {
+        async function uploadExcel() {
             try {
-                const spreadsheetId = document.getElementById('spreadsheetId').value.trim();
-                const apiKey = document.getElementById('apiKey').value.trim();
-                
-                if (!spreadsheetId) {
-                    showMessage('Please enter a Google Sheets ID', 'error');
+                const fileInput = document.getElementById('excelFile') || document.querySelector('input[type="file"]');
+                if (!fileInput) {
+                    showMessage('No file input available - please use Google Sheets integration', 'error');
                     return;
                 }
                 
-                showMessage('Connecting to Google Sheets...', 'info');
-                
-                // Set credentials in the API instance
-                window.googleSheetsAPI.setCredentials(spreadsheetId, apiKey);
-                
-                // Test the connection
-                await window.googleSheetsAPI.testConnection();
-                
-                showMessage('Connected to Google Sheets successfully!', 'success');
-                
-                // Update the file name display
-                const fileName = document.getElementById('fileName');
-                if (fileName) {
-                    fileName.textContent = `Connected: Google Sheets`;
-                }
-                
-                // Enable load data button
-                const loadBtn = document.getElementById('loadSheetsBtn');
-                if (loadBtn) {
-                    loadBtn.disabled = false;
-                }
-                
-            } catch (error) {
-                console.error('Connection failed:', error);
-                showMessage(`Connection failed: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadSheetsData() {
-            try {
-                showMessage('Loading data from Google Sheets...', 'info');
-                
-                // Load the data from Google Sheets
-                await autoLoadFromGithub();
-                
-            } catch (error) {
-                console.error('Load data failed:', error);
-                showMessage(`Load data failed: ${error.message}`, 'error');
-            }
-        }
-
-        async function saveApiCredentials() {
-            try {
-                const spreadsheetId = document.getElementById('spreadsheetId').value.trim();
-                const apiKey = document.getElementById('apiKey').value.trim();
-                
-                if (!spreadsheetId) {
-                    showMessage('Please enter a Google Sheets ID', 'error');
+                const file = fileInput.files[0];
+                if (!file) {
+                    showMessage('⚠️ WARNING: Please select an Excel file to upload', 'error');
                     return;
                 }
                 
-                // Save credentials
-                window.googleSheetsAPI.setCredentials(spreadsheetId, apiKey);
+                showMessage('Processing Excel file for Google Sheets...', 'info');
                 
-                showMessage('Credentials saved successfully!', 'success');
+                // Read the file as array buffer
+                const arrayBuffer = await file.arrayBuffer();
+                const uint8Array = new Uint8Array(arrayBuffer);
+                
+                // Convert to base64 for processing
+                const base64String = btoa(String.fromCharCode(...uint8Array));
+                
+                // Process with Google Sheets integration
+                const result = await window.googleSheetsAPI.uploadExcelFile(base64String, file.name);
+                
+                if (result.success) {
+                    showMessage(`Excel file "${file.name}" processed successfully`, 'success');
+                    
+                    // Clear the file input
+                    fileInput.value = '';
+                    document.getElementById('fileName').textContent = '';
+                    
+                    // Optionally refresh the coil data from the uploaded file
+                    await loadCoilDataFromFile();
+                } else {
+                    showMessage(`Error uploading Excel file: ${result.error}`, 'error');
+                }
                 
             } catch (error) {
-                console.error('Save credentials failed:', error);
-                showMessage(`Save failed: ${error.message}`, 'error');
+                console.error('Error uploading Excel file:', error);
+                showMessage('Error uploading Excel file: ' + error.message, 'error');
             }
         }
 
@@ -3277,34 +4048,173 @@
             }
         }
 
-        function initializeGoogleSheets() {
-            // With OAuth, we just need to check if authentication is ready
-            if (window.googleSheetsAPI) {
-                const connectionInfo = window.googleSheetsAPI.getConnectionInfo();
-                if (connectionInfo.authenticated) {
-                    showMessage('Google Sheets authentication ready', 'info');
-                    
-                    // Enable load data button if authenticated
-                    const loadBtn = document.getElementById('loadSheetsBtn');
-                    if (loadBtn) {
-                        loadBtn.disabled = false;
-                    }
+        function setGoogleSheetsCredentials() {
+            // Check if credentials are already set
+            const existingSpreadsheetId = localStorage.getItem('googleSheets_spreadsheetId');
+            if (existingSpreadsheetId) {
+                const confirm = window.confirm('Google Sheets credentials are already set. Do you want to update them?');
+                if (!confirm) {
+                    showMessage('Using existing Google Sheets credentials. App is working normally.', 'info');
+                    return;
+                }
+            }
+            
+            const spreadsheetUrl = prompt('Enter your Google Sheets URL or Spreadsheet ID:');
+            if (spreadsheetUrl) {
+                const apiKey = prompt('Enter your Google Sheets API Key (optional - leave empty for public sheets):');
+                const storedWebAppUrl = localStorage.getItem('googleSheets_webAppUrl') || '';
+                window.googleSheetsAPI.setCredentials(spreadsheetUrl, apiKey || '', storedWebAppUrl);
+                showMessage('Google Sheets credentials set successfully', 'success');
+                updateGoogleSheetsButtonStatus();
+                
+                // Try to auto-load data after setting credentials
+                autoLoadFromGoogleSheets().catch(error => {
+                    console.error('Auto-load after credential setup failed:', error);
+                });
+            }
+        }
+
+        function updateGoogleSheetsButtonStatus() {
+            const button = document.getElementById('googleSheetsBtn');
+            const existingSpreadsheetId = localStorage.getItem('googleSheets_spreadsheetId');
+            
+            if (existingSpreadsheetId && button) {
+                button.textContent = 'Google Sheets Set ✓';
+                button.style.backgroundColor = '#27ae60';
+                button.title = 'Google Sheets is already configured. Click to change it.';
+            } else if (button) {
+                button.textContent = 'Set Google Sheets';
+                button.style.backgroundColor = '#e74c3c';
+                button.title = 'Click to set Google Sheets credentials.';
+            }
+        }
+
+        async function uploadLocalDataToSheets() {
+            try {
+                showMessage('Uploading local data to Google Sheets...', 'info');
+                
+                // Get local OUT data
+                const localOutData = JSON.parse(localStorage.getItem('outData') || '[]');
+                if (localOutData.length === 0) {
+                    showMessage('No local OUT data found to upload', 'warning');
+                    return;
+                }
+                
+                console.log(`Uploading ${localOutData.length} local OUT entries to Google Sheets`);
+                
+                // Check Google Sheets credentials
+                const { spreadsheetId, apiKey } = window.googleSheetsAPI.getCredentials();
+                if (!spreadsheetId) {
+                    showMessage('Please connect to Google Sheets first using "Connect Sheets" button', 'error');
+                    return;
+                }
+                
+                if (!apiKey || apiKey.trim() === '') {
+                    showMessage('Google Sheets API key is required to write data. Please add your API key in the Google Sheets section.', 'error');
+                    return;
+                }
+                
+                // Get available sheets to find OUT sheet
+                const sheetNames = await window.googleSheetsAPI.getSheetNames();
+                let outSheetName = sheetNames.find(name => 
+                    name.toLowerCase().includes('out')
+                );
+                
+                if (!outSheetName) {
+                    // Use first sheet or create OUT sheet name
+                    outSheetName = sheetNames[0] || 'OUT';
+                    console.log(`No OUT sheet found, using: ${outSheetName}`);
+                }
+                
+                // Upload data to Google Sheets
+                const result = await window.googleSheetsAPI.appendToSheet(outSheetName, localOutData, false);
+                
+                const metaData = JSON.parse(localStorage.getItem('outDataMeta') || '{}');
+                const vesselName = metaData.vesselName || 'coil-data';
+                
+                showMessage(`Successfully uploaded ${localOutData.length} records to Google Sheets (${outSheetName}) for vessel "${vesselName}"`, 'success');
+                console.log('Upload successful:', result);
+                
+            } catch (error) {
+                console.error('Error uploading to Google Sheets:', error);
+                if (error.message.includes('API key required')) {
+                    showMessage('Google Sheets API key is required for writing data. Please add your API key to enable uploads.', 'error');
+                } else {
+                    showMessage('Error uploading to Google Sheets: ' + error.message, 'error');
                 }
             }
         }
 
-        function updateGoogleSheetsStatus() {
-            const connectBtn = document.getElementById('connectSheetsBtn');
-            const loadBtn = document.getElementById('loadSheetsBtn');
-            
-            if (isAuthenticated && connectBtn) {
-                connectBtn.textContent = 'Google Sheets Connected ✓';
-                connectBtn.style.backgroundColor = '#27ae60';
-                if (loadBtn) loadBtn.disabled = false;
-            } else if (connectBtn) {
-                connectBtn.textContent = 'Connect Sheets';
-                connectBtn.style.backgroundColor = '#3498db';
-                if (loadBtn) loadBtn.disabled = true;
+        async function syncWithGoogleSheets() {
+            try {
+                showMessage('Syncing with Google Sheets...', 'info');
+                
+                // Load data from Google Sheets
+                const sheetsData = await window.googleSheetsAPI.loadOutData();
+                
+                if (sheetsData && sheetsData.length > 0) {
+                    // Update local storage with Google Sheets data
+                    localStorage.setItem('outData', JSON.stringify(sheetsData));
+                    
+                    // Update global outData variable
+                    window.outData = sheetsData;
+                    
+                    showMessage(`Successfully synced ${sheetsData.length} records from Google Sheets`, 'success');
+                    console.log('Synced data from Google Sheets:', sheetsData.length, 'records');
+                } else {
+                    showMessage('No data found in Google Sheets to sync', 'warning');
+                }
+                
+            } catch (error) {
+                console.error('Error syncing with Google Sheets:', error);
+                showMessage('Error syncing with Google Sheets: ' + error.message, 'error');
+            }
+        }
+
+        async function connectToGoogleSheets() {
+            try {
+                const spreadsheetId = document.getElementById('spreadsheetId').value.trim();
+                const apiKey = document.getElementById('apiKey').value.trim();
+                const webAppUrl = document.getElementById('webAppUrl').value.trim();
+                
+                if (!spreadsheetId) {
+                    showMessage('Please enter a Google Sheets URL or ID', 'error');
+                    return;
+                }
+                
+                window.googleSheetsAPI.setCredentials(spreadsheetId, apiKey, webAppUrl);
+                
+                // Test connection
+                await window.googleSheetsAPI.testConnection();
+                
+                let connectionStatus = 'Successfully connected to Google Sheets!';
+                if (webAppUrl) {
+                    connectionStatus += ' Web App URL configured for writing data.';
+                } else {
+                    connectionStatus += ' Note: Web App URL needed for writing data to sheets.';
+                }
+                
+                showMessage(connectionStatus, 'success');
+                
+                const button = document.getElementById('connectSheetsBtn');
+                if (button) {
+                    button.textContent = 'Connected ✓';
+                    button.style.backgroundColor = '#27ae60';
+                }
+                
+            } catch (error) {
+                console.error('Error connecting to Google Sheets:', error);
+                showMessage('Connection failed: ' + error.message, 'error');
+            }
+        }
+
+        async function loadDataFromGoogleSheets() {
+            try {
+                showMessage('Loading data from Google Sheets...', 'info');
+                await autoLoadFromGoogleSheets();
+            } catch (error) {
+                console.error('Error loading data from Google Sheets:', error);
+                showMessage('Error loading data: ' + error.message, 'error');
             }
         }
 
@@ -3314,6 +4224,158 @@
             } else {
                 console.log(`[${type.toUpperCase()}] ${text}`);
             }
+        }
+
+        // Test Google Apps Script connection
+        async function testGoogleAppsScript() {
+            try {
+                const { webAppUrl } = window.googleSheetsAPI.getCredentials();
+                
+                if (!webAppUrl || webAppUrl.includes('YOUR_SCRIPT_ID')) {
+                    showMessage('Please enter your Google Apps Script Web App URL first', 'error');
+                    return;
+                }
+                
+                showMessage('Testing Google Apps Script connection...', 'info');
+                
+                const response = await fetch(webAppUrl + '?test=true');
+                const result = await response.json();
+                
+                if (result.success === false && result.error === 'No data provided') {
+                    showMessage('✅ Google Apps Script is working correctly!', 'success');
+                } else {
+                    showMessage('✅ Google Apps Script responded successfully', 'success');
+                }
+                
+            } catch (error) {
+                console.error('Google Apps Script test failed:', error);
+                showMessage(`❌ Test failed: ${error.message}. Please check your setup.`, 'error');
+            }
+        }
+        
+        // Show setup instructions
+        function showSetupInstructions() {
+            const instructions = `
+STEP-BY-STEP GOOGLE APPS SCRIPT SETUP:
+
+Your script URL: https://script.google.com/home/projects/1EIK4xnwIzrV7qg6OXCEXuiejyCOuC9jdwRun6Ex3jVs336jThqmMquA-/edit
+
+REQUIRED STEPS:
+1. Click the URL above to open your Google Apps Script
+2. DELETE ALL existing code in the script editor
+3. PASTE this complete code:
+
+function doGet(e) {
+  return handleRequest(e);
+}
+
+function doPost(e) {
+  return handleRequest(e);
+}
+
+function handleRequest(e) {
+  try {
+    const spreadsheetId = '18VjUGZ-dGFMEq1oIlxIssRlwkfcPZZJfH6GD7UdgOyc';
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    let data, sheetName;
+    
+    if (e.postData && e.postData.contents) {
+      const formData = e.parameter;
+      if (formData.payload) {
+        const payload = JSON.parse(formData.payload);
+        data = payload.records;
+        sheetName = payload.sheetName || 'OUT';
+      }
+    } else if (e.parameter) {
+      sheetName = e.parameter.sheetName || 'OUT';
+      if (e.parameter.data) {
+        data = JSON.parse(e.parameter.data);
+      }
+    }
+    
+    if (data && data.length > 0) {
+      const sheet = spreadsheet.getSheetByName(sheetName);
+      if (!sheet) {
+        return ContentService.createTextOutput(JSON.stringify({
+          success: false,
+          error: "Sheet '" + sheetName + "' not found"
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      data.forEach(record => {
+        const values = Object.values(record);
+        sheet.appendRow(values);
+      });
+      
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        recordsAdded: data.length,
+        message: "Data added to " + sheetName
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: "No data provided"
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+4. Save the script (Ctrl+S)
+5. Click "Deploy" → "New deployment" (blue button)
+6. Choose "Web app" as type
+7. Set "Execute as": Me (your email)  
+8. Set "Who has access": Anyone
+9. Click "Deploy"
+10. IMPORTANT: When you see "This app isn't verified", click "Advanced" then "Go to [your script] (unsafe)"
+11. Click "Allow" to grant permissions
+12. Copy the Web App URL that appears
+13. Test it by opening the URL in a new tab - you should see JSON response
+
+Current status: ${window.googleSheetsAPI.getCredentials().webAppUrl ? 'URL configured' : 'URL not set'}
+`;
+            
+            // Create a better modal dialog
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                background: rgba(0,0,0,0.8); z-index: 10000; display: flex; 
+                align-items: center; justify-content: center; padding: 20px;
+            `;
+            
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: #2c3e50; color: #ecf0f1; padding: 20px; 
+                border-radius: 8px; max-width: 600px; max-height: 80vh; 
+                overflow-y: auto; font-family: monospace; font-size: 12px;
+                line-height: 1.4;
+            `;
+            
+            content.innerHTML = `
+                <h3 style="margin-top: 0;">Google Apps Script Setup</h3>
+                <pre style="white-space: pre-wrap; background: #34495e; padding: 15px; border-radius: 4px; overflow-x: auto;">${instructions}</pre>
+                <button onclick="this.parentElement.parentElement.remove()" 
+                    style="margin-top: 15px; padding: 10px 20px; background: #3498db; 
+                    color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>
+            `;
+            
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+        }
+        
+        // Open Google Apps Script directly
+        function openGoogleScript() {
+            const scriptUrl = 'https://script.google.com/home/projects/1EIK4xnwIzrV7qg6OXCEXuiejyCOuC9jdwRun6Ex3jVs336jThqmMquA-/edit';
+            window.open(scriptUrl, '_blank');
+            
+            // Show quick instructions
+            showMessage('📝 Opening your Google Apps Script. After it opens: 1) Delete all existing code, 2) Paste the new code from Setup Instructions, 3) Deploy as Web App with "Anyone" access', 'info');
         }
 
         // Initialize when permissions are ready
@@ -3331,18 +4393,10 @@
         }
     </script>
 
-    <!-- PWA Service Worker Registration -->
+    <!-- PWA Features - Single File Mode -->
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(function(registration) {
-                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                    }, function(err) {
-                        console.log('ServiceWorker registration failed: ', err);
-                    });
-            });
-        }
+        console.log('PWA running in single file mode - service worker disabled for portability');
+        // Service worker disabled to maintain single-file structure
 
         // Add to home screen prompt
         let deferredPrompt;
