@@ -233,8 +233,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <!-- Enhanced CSP for APK compatibility -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: gap: blob: https: filesystem: file: android-webview-video-poster:; connect-src 'self' https: wss: ws: blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob: data:; style-src 'self' 'unsafe-inline' https: data:; font-src 'self' https: data: blob:; img-src 'self' data: https: blob: file: android-webview-video-poster:; media-src 'self' https: blob: data: file:; object-src 'none'; base-uri 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: gap: blob: https:; connect-src 'self' https: wss: ws:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; font-src 'self' https: data:; img-src 'self' data: https: blob:; media-src 'self' https: blob:;">
     <meta name="format-detection" content="telephone=no">
     <meta name="msapplication-tap-highlight" content="no">
     
@@ -248,73 +247,12 @@
     <meta name="msapplication-TileColor" content="#2c3e50">
     <meta name="apple-touch-fullscreen" content="yes">
     
-    <!-- External Libraries with APK compatibility enhancements -->
-    <script>
-        // Mobile APK detection
-        const isMobileAPK = /Android.*wv|.*WebView/.test(navigator.userAgent) || window.cordova || window.PhoneGap || window.phonegap;
-        console.log('Mobile APK environment detected:', isMobileAPK);
-        
-        // Enhanced library loader with fallbacks for APK compatibility
-        function loadLibraryWithFallback(urls, name, callback) {
-            let currentIndex = 0;
-            
-            function tryLoad() {
-                if (currentIndex >= urls.length) {
-                    console.error(`Failed to load ${name} from all sources`);
-                    if (callback) callback(false);
-                    return;
-                }
-                
-                const script = document.createElement('script');
-                script.src = urls[currentIndex];
-                script.crossOrigin = 'anonymous';
-                script.onload = () => {
-                    console.log(`${name} loaded successfully from:`, urls[currentIndex]);
-                    if (callback) callback(true);
-                };
-                script.onerror = () => {
-                    console.warn(`Failed to load ${name} from:`, urls[currentIndex]);
-                    currentIndex++;
-                    setTimeout(tryLoad, 100); // Small delay before trying next URL
-                };
-                document.head.appendChild(script);
-            }
-            
-            tryLoad();
-        }
-        
-        // Load libraries with multiple CDN fallbacks
-        loadLibraryWithFallback([
-            'https://unpkg.com/xlsx/dist/xlsx.full.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
-            'https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js'
-        ], 'XLSX');
-        
-        loadLibraryWithFallback([
-            'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js',
-            'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js'
-        ], 'HTML5-QRCode');
-        
-        // Enhanced PDF library loading with APK compatibility
-        loadLibraryWithFallback([
-            'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-            'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js',
-            'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'
-        ], 'jsPDF', (loaded) => {
-            if (loaded) {
-                // Load autoTable plugin after jsPDF loads
-                loadLibraryWithFallback([
-                    'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js',
-                    'https://unpkg.com/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js',
-                    'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js'
-                ], 'jsPDF-AutoTable');
-            }
-        });
-        
-        loadLibraryWithFallback([
-            'https://apis.google.com/js/api.js'
-        ], 'Google APIs');
-    </script>
+    <!-- External Libraries -->
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://apis.google.com/js/api.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Comic+Neue&display=swap" rel="stylesheet">
     
     <style>
@@ -2228,8 +2166,6 @@ Data is currently saved locally and will sync once Web App is configured.`);
         // Global instances
         window.permissionManager = new PermissionManager();
         window.googleSheetsAPI = new GoogleSheetsAPI();
-
-        // Functions will be made globally accessible after they are defined
 
         // Initialize app when device is ready
         document.addEventListener('deviceready', onDeviceReady, false);
@@ -4668,36 +4604,14 @@ Data is currently saved locally and will sync once Web App is configured.`);
                     pdfBtn.classList.add('pdf-generating');
                 }
                 
-                // Enhanced jsPDF availability check with mobile APK support
+                // Check if jsPDF is available with multiple fallback methods
                 let jsPDF;
-                console.log('Checking PDF library availability...');
-                console.log('window.jspdf:', typeof window.jspdf);
-                console.log('window.jsPDF:', typeof window.jsPDF);
-                
-                // Try multiple jsPDF access methods for APK compatibility
                 if (window.jspdf && window.jspdf.jsPDF) {
                     jsPDF = window.jspdf.jsPDF;
-                    console.log('Using window.jspdf.jsPDF');
                 } else if (window.jsPDF) {
                     jsPDF = window.jsPDF;
-                    console.log('Using window.jsPDF');
-                } else if (typeof jspdf !== 'undefined' && jspdf.jsPDF) {
-                    jsPDF = jspdf.jsPDF;
-                    console.log('Using global jspdf.jsPDF');
                 } else {
-                    // Fallback: try to use any available PDF constructor
-                    const possibleConstructors = ['jsPDF', 'JSPDF', 'pdf'];
-                    for (const constructor of possibleConstructors) {
-                        if (window[constructor]) {
-                            jsPDF = window[constructor];
-                            console.log(`Using window.${constructor}`);
-                            break;
-                        }
-                    }
-                    
-                    if (!jsPDF) {
-                        throw new Error('PDF library not available. Please check your internet connection and refresh the page.');
-                    }
+                    throw new Error('PDF library not loaded. Please refresh and try again.');
                 }
                 
                 console.log('jsPDF loaded successfully:', typeof jsPDF);
@@ -5235,148 +5149,40 @@ Data is currently saved locally and will sync once Web App is configured.`);
                 const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
                 const filename = `${cleanTitle}_${timestamp}.pdf`;
                 
-                // Enhanced PDF save with mobile APK compatibility
+                // Force PDF save - ensure proper PDF format
                 console.log('Saving PDF with filename:', filename);
-                console.log('Mobile APK detected:', isMobileAPK);
                 
-                // Create PDF blob
-                const pdfBlob = doc.output('blob');
-                const pdfDataUri = doc.output('datauristring');
-                
-                let saveSuccess = false;
-                
-                // Try multiple save methods for maximum compatibility
                 try {
-                    // Method 1: Standard doc.save() for regular browsers
-                    if (!isMobileAPK) {
-                        doc.save(filename);
-                        console.log('PDF saved successfully using doc.save()');
-                        showMessage('PDF downloaded successfully! Check your Downloads folder', 'success');
-                        saveSuccess = true;
-                    }
+                    // Try primary save method
+                    doc.save(filename);
+                    console.log('PDF saved successfully using doc.save()');
+                    showMessage('PDF downloaded successfully! Check your Downloads folder', 'success');
                 } catch (saveError) {
-                    console.warn('Method 1 (doc.save) failed:', saveError);
-                }
-                
-                // Method 2: Blob download for APK environments
-                if (!saveSuccess) {
-                    try {
-                        const url = URL.createObjectURL(pdfBlob);
-                        const downloadLink = document.createElement('a');
-                        downloadLink.href = url;
-                        downloadLink.download = filename;
-                        downloadLink.style.display = 'none';
-                        
-                        // Add to DOM and trigger click
-                        document.body.appendChild(downloadLink);
-                        
-                        // Use multiple click events for APK compatibility
-                        downloadLink.click();
-                        
-                        // Try programmatic click if first didn't work
-                        setTimeout(() => {
-                            downloadLink.dispatchEvent(new MouseEvent('click', {
-                                bubbles: true,
-                                cancelable: true,
-                                view: window
-                            }));
-                        }, 100);
-                        
-                        // Clean up after delay
-                        setTimeout(() => {
-                            if (document.body.contains(downloadLink)) {
-                                document.body.removeChild(downloadLink);
-                            }
-                            URL.revokeObjectURL(url);
-                        }, 2000);
-                        
-                        console.log('PDF saved successfully using blob method');
-                        showMessage('PDF downloaded successfully! Check your Downloads folder', 'success');
-                        saveSuccess = true;
-                        
-                    } catch (blobError) {
-                        console.warn('Method 2 (blob) failed:', blobError);
-                    }
-                }
-                
-                // Method 3: Data URI fallback for stubborn APK environments
-                if (!saveSuccess) {
-                    try {
-                        const downloadLink = document.createElement('a');
-                        downloadLink.href = pdfDataUri;
-                        downloadLink.download = filename;
-                        downloadLink.style.display = 'none';
-                        
-                        document.body.appendChild(downloadLink);
-                        downloadLink.click();
-                        
-                        setTimeout(() => {
-                            if (document.body.contains(downloadLink)) {
-                                document.body.removeChild(downloadLink);
-                            }
-                        }, 1000);
-                        
-                        console.log('PDF saved successfully using data URI method');
-                        showMessage('PDF downloaded successfully via data URI! Check your Downloads folder', 'success');
-                        saveSuccess = true;
-                        
-                    } catch (dataUriError) {
-                        console.warn('Method 3 (data URI) failed:', dataUriError);
-                    }
-                }
-                
-                // Method 4: Share API for mobile devices
-                if (!saveSuccess && navigator.share) {
-                    try {
-                        // Convert blob to file for sharing
-                        const file = new File([pdfBlob], filename, { type: 'application/pdf' });
-                        
-                        navigator.share({
-                            title: title,
-                            text: 'Coil Data Report',
-                            files: [file]
-                        }).then(() => {
-                            console.log('PDF shared successfully using Web Share API');
-                            showMessage('PDF shared successfully!', 'success');
-                            saveSuccess = true;
-                        }).catch((shareError) => {
-                            console.warn('Method 4 (share API) failed:', shareError);
-                        });
-                        
-                    } catch (shareError) {
-                        console.warn('Method 4 (share API) failed:', shareError);
-                    }
-                }
-                
-                // Method 5: Last resort - open in new window
-                if (!saveSuccess) {
-                    try {
-                        const newWindow = window.open();
-                        if (newWindow) {
-                            newWindow.document.write(`
-                                <html>
-                                    <head><title>${title}</title></head>
-                                    <body style="margin:0;padding:20px;font-family:Arial,sans-serif;">
-                                        <h2>PDF Generation Complete</h2>
-                                        <p>Right-click the link below and select "Save As" to download:</p>
-                                        <a href="${pdfDataUri}" download="${filename}" style="color:#3498db;text-decoration:none;font-size:18px;">Download ${filename}</a>
-                                        <br><br>
-                                        <p style="color:#666;font-size:14px;">If download doesn't start automatically, copy the link address and paste it in a new browser tab.</p>
-                                    </body>
-                                </html>
-                            `);
-                            newWindow.document.close();
-                            console.log('PDF opened in new window as fallback');
-                            showMessage('PDF opened in new window. Right-click the link to download.', 'info');
-                            saveSuccess = true;
+                    console.warn('Primary save failed, trying blob method:', saveError);
+                    
+                    // Fallback to blob method
+                    const pdfBlob = doc.output('blob');
+                    const url = URL.createObjectURL(pdfBlob);
+                    
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = url;
+                    downloadLink.download = filename;
+                    downloadLink.style.display = 'none';
+                    document.body.appendChild(downloadLink);
+                    
+                    // Force click and download
+                    downloadLink.click();
+                    
+                    // Clean up after delay
+                    setTimeout(() => {
+                        if (document.body.contains(downloadLink)) {
+                            document.body.removeChild(downloadLink);
                         }
-                    } catch (windowError) {
-                        console.warn('Method 5 (new window) failed:', windowError);
-                    }
-                }
-                
-                if (!saveSuccess) {
-                    throw new Error('All PDF save methods failed. Please try refreshing the page.');
+                        URL.revokeObjectURL(url);
+                    }, 1000);
+                    
+                    console.log('PDF saved successfully using blob method');
+                    showMessage('PDF downloaded successfully via blob method! Check your Downloads folder', 'success');
                 }
                 
             } catch (error) {
@@ -6073,27 +5879,6 @@ Current status: ${window.googleSheetsAPI.getCredentials().webAppUrl ? 'URL confi
                 await window.permissionManager.initialize();
             });
         }
-
-        // Make all functions globally accessible for onclick handlers (prevents "function not defined" errors)
-        window.generateAllOutDataReport = generateAllOutDataReport;
-        window.showSuggestions = showSuggestions;
-        window.selectSuggestion = selectSuggestion;
-        window.toggleClearButton = toggleClearButton;
-        window.searchCoil = searchCoil;
-        window.closeCoilModal = closeCoilModal;
-        window.saveToOut = saveToOut;
-        window.resetForm = resetForm;
-        window.clearCoilInput = clearCoilInput;
-        window.submitCoilData = submitCoilData;
-        window.generateDailyReport = generateDailyReport;
-        window.generateWeeklyReport = generateWeeklyReport;
-        window.generateMonthlyReport = generateMonthlyReport;
-        window.exportToExcel = exportToExcel;
-        window.generateQRCode = generateQRCode;
-        window.syncFromGoogleSheets = syncFromGoogleSheets;
-        window.connectToGoogleSheets = connectToGoogleSheets;
-        window.testGoogleAppsScript = testGoogleAppsScript;
-        window.showGoogleSheetsSetup = showGoogleSheetsSetup;
     </script>
 
     <!-- PWA Features - Single File Mode -->
