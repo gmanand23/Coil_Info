@@ -1170,21 +1170,19 @@
 
     <script>
         // Google Drive API Configuration for PDF Storage
-        // SETUP INSTRUCTIONS FOR GOOGLE DRIVE INTEGRATION:
-        // 1. Go to https://console.cloud.google.com/
-        // 2. Create a new project or select existing one
-        // 3. Enable Google Drive API
-        // 4. Go to "Credentials" and create:
-        //    - API Key (restrict to Google Drive API and your domain)
-        //    - OAuth 2.0 Client ID (Web application type)
-        // 5. Add your domain to "Authorized JavaScript origins"
-        // 6. Replace 'your-api-key' and 'your-client-id' below with actual values
+        // NOTE: OAuth redirect URI mismatch requires proper setup in Google Cloud Console
+        // For Replit, add these authorized JavaScript origins and redirect URIs:
+        // - https://*.replit.app
+        // - https://*.replit.dev  
+        // - https://*.replit.co
         const GOOGLE_DRIVE_CONFIG = {
             CLIENT_ID: '132985104600-8agsobm47kgcrif9rc72ls2l1nc4g6kp.apps.googleusercontent.com',
             API_KEY: 'GOOGLE_API_KEY', // This will be replaced by environment variable if available
             DISCOVERY_DOC: 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
             SCOPES: 'https://www.googleapis.com/auth/drive.file',
-            FOLDER_ID: '1LNmkrTKI8SuypPFTwTbKJ3WAns6momDB' // Your specified Google Drive folder
+            FOLDER_ID: '1LNmkrTKI8SuypPFTwTbKJ3WAns6momDB', // Your specified Google Drive folder
+            // Fallback mode - skip OAuth and use direct link sharing
+            USE_FALLBACK_MODE: true
         };
 
         // Google Drive API Helper Class
@@ -2404,6 +2402,14 @@ Data is currently saved locally and will sync once Web App is configured.`);
                     window.GOOGLE_API_KEY = apiKeyFromEnv;
                     GOOGLE_DRIVE_CONFIG.API_KEY = apiKeyFromEnv;
                     console.log('Google Drive API key configured from environment');
+                    
+                    // Initialize Google Drive API now that we have the key
+                    try {
+                        await googleDriveManager.initialize();
+                        console.log('Google Drive API successfully initialized with environment key');
+                    } catch (error) {
+                        console.log('Google Drive API initialization failed:', error);
+                    }
                 } else {
                     console.log('No valid API key found in environment - using manual configuration');
                 }
@@ -6133,20 +6139,7 @@ Current status: ${window.googleSheetsAPI.getCredentials().webAppUrl ? 'URL confi
             console.log('Device ready - initializing permissions');
             await window.permissionManager.initialize();
             
-            // Initialize Google Drive API for PDF storage
-            console.log('Initializing Google Drive API...');
-            try {
-                // Set the API key from environment if available
-                if (window.GOOGLE_API_KEY && window.GOOGLE_API_KEY !== 'GOOGLE_API_KEY') {
-                    GOOGLE_DRIVE_CONFIG.API_KEY = window.GOOGLE_API_KEY;
-                    console.log('Google Drive API key loaded from environment');
-                }
-                
-                await googleDriveManager.initialize();
-                console.log('Google Drive API ready for PDF storage');
-            } catch (error) {
-                console.log('Google Drive API credentials not provided. PDF reports will be downloaded locally.');
-            }
+            // Google Drive API initialization is handled in the main device ready function
         }, false);
 
         // Fallback for browser testing
@@ -6155,20 +6148,7 @@ Current status: ${window.googleSheetsAPI.getCredentials().webAppUrl ? 'URL confi
                 console.log('Browser mode - initializing permissions');
                 await window.permissionManager.initialize();
                 
-                // Initialize Google Drive API for PDF storage
-                console.log('Initializing Google Drive API...');
-                try {
-                    // Set the API key from environment if available
-                    if (window.GOOGLE_API_KEY && window.GOOGLE_API_KEY !== 'GOOGLE_API_KEY') {
-                        GOOGLE_DRIVE_CONFIG.API_KEY = window.GOOGLE_API_KEY;
-                        console.log('Google Drive API key loaded from environment');
-                    }
-                    
-                    await googleDriveManager.initialize();
-                    console.log('Google Drive API ready for PDF storage');
-                } catch (error) {
-                    console.log('Google Drive API credentials not provided. PDF reports will be downloaded locally.');
-                }
+                // Google Drive API initialization is handled in the main device ready function
             });
         }
     </script>
